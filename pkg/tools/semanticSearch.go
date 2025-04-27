@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
+	"libagent/pkg/config"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/tmc/langchaingo/embeddings"
@@ -37,8 +37,8 @@ type SemanticSearchArgs struct {
 }
 
 type SemanticSearchTool struct {
-	AIURL          string
-	AIToken        string
+	OpenAIURL      string
+	OpenAIToken    string
 	DBConnection   string
 	EmbeddingModel string
 	MaxResults     int
@@ -63,8 +63,8 @@ func (s SemanticSearchTool) Call(ctx context.Context, input string) (string, err
 	}
 
 	llm, err := openai.New(
-		openai.WithBaseURL(s.AIURL),
-		openai.WithToken(s.AIToken),
+		openai.WithBaseURL(s.OpenAIURL),
+		openai.WithToken(s.OpenAIToken),
 		openai.WithEmbeddingModel(s.EmbeddingModel),
 		openai.WithAPIVersion("v1"),
 	)
@@ -101,17 +101,33 @@ func (s SemanticSearchTool) Call(ctx context.Context, input string) (string, err
 }
 
 func init() {
-	toolsRegistry = append(toolsRegistry,
-		func() (ToolData, error) {
-			semanticSearchTool := &SemanticSearchTool{
-				AIURL:          os.Getenv("API_URL"),
-				AIToken:        os.Getenv("API_TOKEN"),
-				DBConnection:   os.Getenv("SEMANTIC_SEARCH_DB_CONNECTION"),
-				EmbeddingModel: os.Getenv("SEMANTIC_SEARCH_EMBEDDING_MODEL"),
-				MaxResults:     2,
+	globalToolsRegistry = append(globalToolsRegistry,
+		func(cfg config.Config) (*ToolData, error) {
+			if cfg.SemanticSearchOpenAIURL == "" {
+				return nil, fmt.Errorf("semantic search empty OpenAI URL")
+			}
+			if cfg.SemanticSearchOpenAIToken == "" {
+				return nil, fmt.Errorf("semantic search empty OpenAI Token")
+			}
+			if cfg.SemanticSearchDBConnection == "" {
+				return nil, fmt.Errorf("semantic search empty DB connection string")
+			}
+			if cfg.SemanticSearchEmbeddingModel == "" {
+				return nil, fmt.Errorf("semantic search empty embedding model")
+			}
+			if cfg.SemanticSearchMaxResults == 0 {
+				cfg.SemanticSearchMaxResults = 2
 			}
 
-			return ToolData{
+			semanticSearchTool := &SemanticSearchTool{
+				OpenAIURL:      cfg.SemanticSearchOpenAIURL,
+				OpenAIToken:    cfg.SemanticSearchOpenAIToken,
+				DBConnection:   cfg.SemanticSearchDBConnection,
+				EmbeddingModel: cfg.SemanticSearchEmbeddingModel,
+				MaxResults:     cfg.SemanticSearchMaxResults,
+			}
+
+			return &ToolData{
 				Definition: SemanticSearchDefinition,
 				Call:       semanticSearchTool.Call,
 			}, nil

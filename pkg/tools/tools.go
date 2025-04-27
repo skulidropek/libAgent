@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"libagent/pkg/config"
 	"slices"
 	"strings"
 
@@ -19,25 +20,26 @@ type ToolData struct {
 }
 
 type ToolsExectutor struct {
-	Tools map[string]ToolData
+	Tools map[string]*ToolData
 }
 
-var toolsRegistry = []func() (ToolData, error){}
+var globalToolsRegistry = []func(config.Config) (*ToolData, error){}
 
 var ErrNoSuchTool = errors.New("no such tool")
 
-func NewToolsExecutor() (*ToolsExectutor, error) {
-	tools := map[string]ToolData{}
-	for _, toolInit := range toolsRegistry {
-		tool, err := toolInit()
+func NewToolsExecutor(cfg config.Config) (*ToolsExectutor, error) {
+	toolsExecutor := ToolsExectutor{}
+	tools := map[string]*ToolData{}
+	for _, toolInit := range globalToolsRegistry {
+		tool, err := toolInit(cfg)
 		if err != nil {
 			return nil, err
 		}
 		tools[tool.Definition.Name] = tool
 	}
-	return &ToolsExectutor{
-		Tools: tools,
-	}, nil
+	toolsExecutor.Tools = tools
+
+	return &toolsExecutor, nil
 }
 
 func (e ToolsExectutor) Execute(ctx context.Context, call llms.ToolCall) (llms.ToolCallResponse, error) {

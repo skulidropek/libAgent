@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"libagent/pkg/tools"
-	"log"
 	"regexp"
 	"strings"
 
+	"github.com/rs/zerolog/log"
 	"github.com/tmc/langchaingo/llms"
 )
 
@@ -50,6 +50,11 @@ Task: %s
 Response:`
 
 const PromptLLMTool = `Do not include any introductory phrases or explanations. Task: %s`
+const PromptCallTool = `You will be provided with tool name and arguments for the call.
+	Try to sanitize arguments, resolve possible string concatenation.
+	Tool name: %s
+	Arguments: %s
+`
 
 type State struct {
 	Task       string
@@ -61,7 +66,7 @@ type State struct {
 
 type Step struct {
 	Plan      string
-	StepName  string
+	Name      string
 	Tool      string
 	ToolInput string
 }
@@ -96,7 +101,7 @@ func (a Agent) GetPlan(ctx context.Context, s interface{}) (interface{}, error) 
 			Step{
 				// m[0] - full match,
 				Plan:      m[1],
-				StepName:  m[2],
+				Name:      m[2],
 				Tool:      m[3],
 				ToolInput: m[4],
 			},
@@ -105,7 +110,10 @@ func (a Agent) GetPlan(ctx context.Context, s interface{}) (interface{}, error) 
 	}
 
 	state.PlanString = result
-	log.Println("PlanString: ", state.PlanString)	// TODO: add zerolog with specific label
+
+	log.Debug().
+		Interface("state.Steps", state.Steps).
+		Msg("ReWOO: GetPlan")
 
 	return state, nil
 }
@@ -117,12 +125,12 @@ func (a Agent) Solve(ctx context.Context, s interface{}) (interface{}, error) {
 	for _, step := range state.Steps {
 		for stepName, result := range state.Results {
 			step.ToolInput = strings.ReplaceAll(step.ToolInput, stepName, result)
-			step.StepName = strings.ReplaceAll(step.StepName, stepName, result)
+			step.Name = strings.ReplaceAll(step.Name, stepName, result)
 		}
 		plan += fmt.Sprintf(
 			"Plan: %s\n%s = %s[%s]\n",
 			step.Plan,
-			step.StepName,
+			step.Name,
 			step.Tool,
 			step.ToolInput,
 		)
@@ -138,6 +146,9 @@ func (a Agent) Solve(ctx context.Context, s interface{}) (interface{}, error) {
 	}
 
 	state.Result = response.Choices[0].Content
+	log.Debug().
+		Str("state.Result", state.Result).
+		Msg("ReWOO: Solve")
 
 	return state, nil
 }
@@ -150,12 +161,13 @@ func (a Agent) ToolExecution(ctx context.Context, s interface{}) (interface{}, e
 	for stepName, result := range state.Results {
 		step.ToolInput = strings.ReplaceAll(step.ToolInput, stepName, result)
 	}
+
 	prompt := fmt.Sprintf(PromptLLMTool, step.ToolInput)
 	options := []llms.CallOption{}
 	content := ""
 	if step.Tool != tools.LLMToolName {
 		prompt = fmt.Sprintf(
-			"Call the '%s' tool with args: %s\nResolve any string concatenations",
+			PromptCallTool,
 			step.Tool,
 			step.ToolInput,
 		)
@@ -169,6 +181,12 @@ func (a Agent) ToolExecution(ctx context.Context, s interface{}) (interface{}, e
 			}
 		}
 	}
+
+	log.Debug().
+		Str("name", step.Name).
+		Str("tool", step.Tool).
+		Str("prompt", prompt).
+		Msg("ReWOO: ToolExecution pre-GenerateContent")
 
 	response, err := a.LLM.GenerateContent(ctx,
 		[]llms.MessageContent{
@@ -187,8 +205,13 @@ func (a Agent) ToolExecution(ctx context.Context, s interface{}) (interface{}, e
 			return state, err
 		}
 		content = response.Content
-		log.Println("step result: ", content)	//TODO: add zerolog with specific layer
 	}
+	log.Debug().
+		Str("name", step.Name).
+		Str("tool", step.Tool).
+		Str("prompt", prompt).
+		Str("content", content).
+		Msg("ReWOO: ToolExecution")
 
 	if len(state.Results) == 0 {
 		state.Results = map[string]string{}
@@ -198,7 +221,7 @@ func (a Agent) ToolExecution(ctx context.Context, s interface{}) (interface{}, e
 		return state, err
 	}
 
-	state.Results[step.StepName] = string(jsonSafeContent)
+	state.Results[step.Name] = string(jsonSafeContent)
 	return state, nil
 }
 

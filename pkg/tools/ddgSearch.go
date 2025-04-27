@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"encoding/json"
+	"libagent/pkg/config"
 
 	"github.com/tmc/langchaingo/llms"
 	"github.com/tmc/langchaingo/tools/duckduckgo"
@@ -10,10 +11,6 @@ import (
 
 var DDGSearchDefinition = llms.FunctionDefinition{
 	Name: "search",
-	Description: `
-	"A wrapper around DuckDuckGo Search."
-	"Free search alternative to google and serpapi."
-	"Input should be a search query."`,
 	Parameters: map[string]any{
 		"type": "object",
 		"properties": map[string]any{
@@ -42,17 +39,29 @@ func (s DDGSearchTool) Call(ctx context.Context, input string) (string, error) {
 }
 
 func init() {
-	toolsRegistry = append(toolsRegistry,
-		func() (ToolData, error) {
-			wrappedTool, err := duckduckgo.New(5, duckduckgo.DefaultUserAgent)
-			if err != nil {
-				return ToolData{}, err
+	globalToolsRegistry = append(globalToolsRegistry,
+		func(cfg config.Config) (*ToolData, error) {
+			if cfg.DDGSearchMaxResults == 0 {
+				cfg.DDGSearchMaxResults = 5
 			}
+			if cfg.DDGSearchUserAgent == "" {
+				cfg.DDGSearchUserAgent = duckduckgo.DefaultUserAgent
+			}
+
+			wrappedTool, err := duckduckgo.New(
+				cfg.DDGSearchMaxResults,
+				cfg.DDGSearchUserAgent,
+			)
+			if err != nil {
+				return nil, err
+			}
+
 			ddgSearchTool := DDGSearchTool{
 				wrappedTool: wrappedTool,
 			}
 
-			return ToolData{
+			DDGSearchDefinition.Description = wrappedTool.Description()
+			return &ToolData{
 				Definition: DDGSearchDefinition,
 				Call:       ddgSearchTool.Call,
 			}, nil
