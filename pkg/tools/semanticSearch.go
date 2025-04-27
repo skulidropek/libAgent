@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/tmc/langchaingo/embeddings"
@@ -97,4 +98,23 @@ func (s SemanticSearchTool) Call(ctx context.Context, input string) (string, err
 	}
 
 	return response, nil
+}
+
+func init() {
+	toolsRegistry = append(toolsRegistry,
+		func() (ToolData, error) {
+			semanticSearchTool := &SemanticSearchTool{
+				AIURL:          os.Getenv("API_URL"),
+				AIToken:        os.Getenv("API_TOKEN"),
+				DBConnection:   os.Getenv("SEMANTIC_SEARCH_DB_CONNECTION"),
+				EmbeddingModel: os.Getenv("SEMANTIC_SEARCH_EMBEDDING_MODEL"),
+				MaxResults:     2,
+			}
+
+			return ToolData{
+				Definition: SemanticSearchDefinition,
+				Call:       semanticSearchTool.Call,
+			}, nil
+		},
+	)
 }

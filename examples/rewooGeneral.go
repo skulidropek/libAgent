@@ -9,7 +9,6 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/tmc/langchaingo/llms/openai"
-	"github.com/tmc/langchaingo/tools/duckduckgo"
 )
 
 const TestPrompt = `Using semantic search tool, which can search across various code from the project collections find out the telegram library name in the code file contents for the project called "Hellper". Extract it from the given code and use a web search to find the pkg.go.dev documentation for it. Give me the URL for it.`
@@ -23,7 +22,6 @@ func main() {
 	baseURL := getEnv("API_URL")
 	apiToken := getEnv("API_TOKEN")
 	modelName := getEnv("MODEL")
-	semanticSearchDBConnection := getEnv("SEMANTIC_SEARCH_DB_CONNECTION")
 
 	llm, err := openai.New(
 		openai.WithToken(apiToken),
@@ -35,20 +33,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	ddgTool, err := duckduckgo.New(5, duckduckgo.DefaultUserAgent)
-	if err != nil {
-		log.Fatal(err)
-	}
-	toolsExecutor, err := tools.NewToolsExecutor(
-		&tools.SemanticSearchTool{
-			AIURL:          baseURL,
-			AIToken:        apiToken,
-			DBConnection:   semanticSearchDBConnection,
-			EmbeddingModel: "text-embedding-ada-002",
-			MaxResults:     2,
-		},
-		ddgTool,
-	)
+	toolsExecutor, err := tools.NewToolsExecutor()
 	if err != nil {
 		log.Fatal(err)
 	}

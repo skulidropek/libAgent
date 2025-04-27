@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/tmc/langchaingo/llms"
-	"github.com/tmc/langchaingo/tools/duckduckgo"
 )
 
 const LLMToolName = "LLM"
@@ -23,26 +22,21 @@ type ToolsExectutor struct {
 	Tools map[string]ToolData
 }
 
+var toolsRegistry = []func() (ToolData, error){}
+
 var ErrNoSuchTool = errors.New("no such tool")
 
-func NewToolsExecutor(semanticSearchTool *SemanticSearchTool, ddgSearchTool *duckduckgo.Tool) (*ToolsExectutor, error) {
+func NewToolsExecutor() (*ToolsExectutor, error) {
+	tools := map[string]ToolData{}
+	for _, toolInit := range toolsRegistry {
+		tool, err := toolInit()
+		if err != nil {
+			return nil, err
+		}
+		tools[tool.Definition.Name] = tool
+	}
 	return &ToolsExectutor{
-		Tools: map[string]ToolData{
-			SemanticSearchDefinition.Name: {
-				Definition: SemanticSearchDefinition,
-				Call:       semanticSearchTool.Call,
-			},
-			DDGSearchDefinition.Name: {
-				Definition: DDGSearchDefinition,
-				Call: func(ctx context.Context, s string) (string, error) {
-					ddgSearchArgs := DDGSearchArgs{}
-					if err := json.Unmarshal([]byte(s), &ddgSearchArgs); err != nil {
-						return "", err
-					}
-					return ddgSearchTool.Call(ctx, ddgSearchArgs.Query)
-				},
-			},
-		},
+		Tools: tools,
 	}, nil
 }
 
