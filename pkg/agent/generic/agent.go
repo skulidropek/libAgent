@@ -21,6 +21,7 @@ func (a *Agent) Run(
 	state []llms.MessageContent,
 ) (llms.MessageContent, error) {
 	// TODO integrate regular chat flow into generic agent
+	// this is messageGraph agent, not stateGraph agent as reasoning without obsrvation agent
 	return llms.MessageContent{}, nil
 }
 

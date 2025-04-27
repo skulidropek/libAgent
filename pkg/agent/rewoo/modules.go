@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"libagent/pkg/tools"
+	"log"
 	"regexp"
 	"strings"
 
@@ -104,6 +105,7 @@ func (a Agent) GetPlan(ctx context.Context, s interface{}) (interface{}, error) 
 	}
 
 	state.PlanString = result
+	log.Println("PlanString: ", state.PlanString)	// TODO: add zerolog with specific label
 
 	return state, nil
 }
@@ -185,6 +187,7 @@ func (a Agent) ToolExecution(ctx context.Context, s interface{}) (interface{}, e
 			return state, err
 		}
 		content = response.Content
+		log.Println("step result: ", content)	//TODO: add zerolog with specific layer
 	}
 
 	if len(state.Results) == 0 {
