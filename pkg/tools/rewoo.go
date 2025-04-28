@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"encoding/json"
+	"libagent/pkg/agent"
 	"libagent/pkg/config"
 
 	"github.com/tmc/langchaingo/llms"
@@ -30,12 +31,8 @@ type ReWOOToolArgs struct {
 	Query string `json:"query"`
 }
 
-type ReWOOAgent interface {
-	SimpleRun(context.Context, string) (string, error)
-}
-
 type ReWOOTool struct {
-	agent ReWOOAgent
+	agent agent.Agent
 }
 
 func (s ReWOOTool) Call(ctx context.Context, input string) (string, error) {
@@ -48,9 +45,9 @@ func (s ReWOOTool) Call(ctx context.Context, input string) (string, error) {
 
 func init() {
 	globalToolsRegistry = append(globalToolsRegistry,
-		func(cfg config.Config) (*ToolData, error) {
+		func(ctx context.Context, cfg config.Config) (*ToolData, error) {
 			rewooTool := ReWOOTool{
-				agent: cfg.RewooAgent,
+				agent: ctx.Value("ReWOOAgent").(agent.Agent),
 			}
 
 			return &ToolData{

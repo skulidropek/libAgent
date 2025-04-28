@@ -40,7 +40,7 @@ func (s DDGSearchTool) Call(ctx context.Context, input string) (string, error) {
 
 func init() {
 	globalToolsRegistry = append(globalToolsRegistry,
-		func(cfg config.Config) (*ToolData, error) {
+		func(ctx context.Context, cfg config.Config) (*ToolData, error) {
 			if cfg.DDGSearchMaxResults == 0 {
 				cfg.DDGSearchMaxResults = 5
 			}

@@ -23,15 +23,15 @@ type ToolsExectutor struct {
 	Tools map[string]*ToolData
 }
 
-var globalToolsRegistry = []func(config.Config) (*ToolData, error){}
+var globalToolsRegistry = []func(context.Context, config.Config) (*ToolData, error){}
 
 var ErrNoSuchTool = errors.New("no such tool")
 
-func NewToolsExecutor(cfg config.Config) (*ToolsExectutor, error) {
+func NewToolsExecutor(ctx context.Context, cfg config.Config) (*ToolsExectutor, error) {
 	toolsExecutor := ToolsExectutor{}
 	tools := map[string]*ToolData{}
 	for _, toolInit := range globalToolsRegistry {
-		tool, err := toolInit(cfg)
+		tool, err := toolInit(ctx, cfg)
 		if err != nil {
 			return nil, err
 		}

@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"libagent/pkg/agent"
 	"os"
 	"reflect"
 	"strconv"
@@ -24,8 +23,6 @@ type Config struct {
 
 	DDGSearchUserAgent  string `env:"DDG_SEARCH_USER_AGENT"`
 	DDGSearchMaxResults int    `env:"DDG_SEARCH_MAX_RESULTS"`
-
-	RewooAgent agent.Agent
 }
 
 func NewConfig() (Config, error) {

@@ -102,7 +102,7 @@ func (s SemanticSearchTool) Call(ctx context.Context, input string) (string, err
 
 func init() {
 	globalToolsRegistry = append(globalToolsRegistry,
-		func(cfg config.Config) (*ToolData, error) {
+		func(ctx context.Context, cfg config.Config) (*ToolData, error) {
 			if cfg.SemanticSearchOpenAIURL == "" {
 				return nil, fmt.Errorf("semantic search empty OpenAI URL")
 			}

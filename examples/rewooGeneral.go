@@ -51,7 +51,7 @@ func main() {
 		log.Fatal().Msg("main empty model")
 	}
 	rewooAgent := rewoo.Agent{}
-	cfg.RewooAgent = &rewooAgent
+	ctx := context.WithValue(context.Background(), "ReWOOAgent", &rewooAgent)
 
 	llm, err := openai.New(
 		openai.WithBaseURL(cfg.OpenAIURL),
@@ -64,14 +64,14 @@ func main() {
 	}
 	rewooAgent.LLM = llm
 
-	toolsExecutor, err := tools.NewToolsExecutor(cfg)
+	toolsExecutor, err := tools.NewToolsExecutor(ctx, cfg)
 	if err != nil {
 		log.Fatal().Err(err).Msg("main tools.NewToolsExecutor")
 	}
 	rewooAgent.ToolsExecutor = toolsExecutor
 
 	for idx, prompt := range []string{InnerReWOOTestPrompt, HackerTestPrompt} {
-		result, err := rewooAgent.SimpleRun(context.Background(), prompt)
+		result, err := rewooAgent.SimpleRun(ctx, prompt)
 		if err != nil {
 			log.Fatal().Err(err).Msg("main rewooAgent.SimpleRun")
 		}
