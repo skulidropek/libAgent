@@ -41,10 +41,10 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("main config.NewConfig")
 	}
-	if cfg.OpenAIURL == "" {
+	if cfg.AIURL == "" {
 		log.Fatal().Msg("main empty OpenAI URL")
 	}
-	if cfg.OpenAIToken == "" {
+	if cfg.ApiToken == "" {
 		log.Fatal().Msg("main empty OpenAI Token")
 	}
 	if cfg.Model == "" {
@@ -54,8 +54,8 @@ func main() {
 	ctx := context.WithValue(context.Background(), "ReWOOAgent", &rewooAgent)
 
 	llm, err := openai.New(
-		openai.WithBaseURL(cfg.OpenAIURL),
-		openai.WithToken(cfg.OpenAIToken),
+		openai.WithBaseURL(cfg.AIURL),
+		openai.WithToken(cfg.ApiToken),
 		openai.WithModel(cfg.Model),
 		openai.WithAPIVersion("v1"),
 	)

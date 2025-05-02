@@ -11,12 +11,12 @@ import (
 )
 
 type Config struct {
-	OpenAIURL   string `env:"OPENAI_URL"`
-	OpenAIToken string `env:"OPENAI_TOKEN"`
+	AIURL   string `env:"AI_URL"`
+	ApiToken string `env:"API_TOKEN"`
 	Model       string `env:"MODEL"`
 
-	SemanticSearchOpenAIURL      string `env:"OPENAI_URL,SEMANTIC_SEARCH_OPENAI_URL"`
-	SemanticSearchOpenAIToken    string `env:"OPENAI_TOKEN,SEMANTIC_SEARCH_OPENAI_TOKEN"`
+	SemanticSearchOpenAIURL      string `env:"AI_URL,SEMANTIC_SEARCH_OPENAI_URL"`
+	SemanticSearchOpenAIToken    string `env:"API_TOKEN,SEMANTIC_SEARCH_OPENAI_TOKEN"`
 	SemanticSearchDBConnection   string `env:"SEMANTIC_SEARCH_DB_CONNECTION"`
 	SemanticSearchEmbeddingModel string `env:"SEMANTIC_SEARCH_EMBEDDING_MODEL"`
 	SemanticSearchMaxResults     int    `env:"SEMANTIC_SEARCH_MAX_RESULTS"`
