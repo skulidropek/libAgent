@@ -17,7 +17,7 @@ const (
 
 type Agent struct {
 	LLM           *openai.LLM
-	ToolsExecutor *tools.ToolsExectutor
+	ToolsExecutor *tools.ToolsExecutor
 
 	graph *graph.Runnable
 }

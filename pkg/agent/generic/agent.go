@@ -11,7 +11,7 @@ import (
 
 type Agent struct {
 	LLM           *openai.LLM
-	ToolsExecutor *tools.ToolsExectutor
+	ToolsExecutor *tools.ToolsExecutor
 
 	toolsList *[]llms.Tool
 }
