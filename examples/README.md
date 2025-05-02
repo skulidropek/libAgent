@@ -13,9 +13,9 @@ Imports:
 - github.com/tmc/langchaingo/tools/duckduckgo
 
 External data, input sources:
-- API_URL: The base URL for the OpenAI API.
-- API_TOKEN: The API token for the OpenAI API.
-- MODEL: The name of the OpenAI model to use.
+- API_URL: The base URL for the Swarmind API.
+- API_TOKEN: The API token for the Swarmind API.
+- MODEL: The name of the LLM model to use.
 - SEMANTIC_SEARCH_DB_CONNECTION: The connection string for the semantic search database.
 
 TODOs:

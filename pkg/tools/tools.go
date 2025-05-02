@@ -19,7 +19,7 @@ type ToolData struct {
 	Call       func(context.Context, string) (string, error)
 }
 
-type ToolsExectutor struct {
+type ToolsExecutor struct {
 	Tools map[string]*ToolData
 }
 
@@ -27,8 +27,8 @@ var globalToolsRegistry = []func(context.Context, config.Config) (*ToolData, err
 
 var ErrNoSuchTool = errors.New("no such tool")
 
-func NewToolsExecutor(ctx context.Context, cfg config.Config) (*ToolsExectutor, error) {
-	toolsExecutor := ToolsExectutor{}
+func NewToolsExecutor(ctx context.Context, cfg config.Config) (*ToolsExecutor, error) {
+	toolsExecutor := ToolsExecutor{}
 	tools := map[string]*ToolData{}
 	for _, toolInit := range globalToolsRegistry {
 		tool, err := toolInit(ctx, cfg)
@@ -42,7 +42,7 @@ func NewToolsExecutor(ctx context.Context, cfg config.Config) (*ToolsExectutor, 
 	return &toolsExecutor, nil
 }
 
-func (e ToolsExectutor) Execute(ctx context.Context, call llms.ToolCall) (llms.ToolCallResponse, error) {
+func (e ToolsExecutor) Execute(ctx context.Context, call llms.ToolCall) (llms.ToolCallResponse, error) {
 	response := llms.ToolCallResponse{
 		ToolCallID: call.ID,
 		Name:       call.FunctionCall.Name,
@@ -57,7 +57,7 @@ func (e ToolsExectutor) Execute(ctx context.Context, call llms.ToolCall) (llms.T
 	return response, err
 }
 
-func (e ToolsExectutor) ToolsList() []llms.Tool {
+func (e ToolsExecutor) ToolsList() []llms.Tool {
 	tools := []llms.Tool{}
 	for _, toolData := range e.Tools {
 		tools = append(tools, llms.Tool{
@@ -74,7 +74,7 @@ func (e ToolsExectutor) ToolsList() []llms.Tool {
 	return tools
 }
 
-func (e ToolsExectutor) ToolsPromptDesc() string {
+func (e ToolsExecutor) ToolsPromptDesc() string {
 	desc := ""
 
 	funcDefs := []llms.FunctionDefinition{

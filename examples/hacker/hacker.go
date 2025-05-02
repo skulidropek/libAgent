@@ -30,7 +30,7 @@ Then think what kind of CVE's can be used to actual perform attack on the target
 Then use search and find any relevant information about this CVE in a web
 Return user this plan.
 
-User Mission:
+User Mission: 
 `
 
 func main() {
@@ -70,7 +70,7 @@ func main() {
 	}
 	rewooAgent.ToolsExecutor = toolsExecutor
 
-	for idx, prompt := range []string{InnerReWOOTestPrompt, HackerTestPrompt} {
+	for idx, prompt := range []string{HackerTestPrompt} {
 		result, err := rewooAgent.SimpleRun(ctx, prompt)
 		if err != nil {
 			log.Fatal().Err(err).Msg("main rewooAgent.SimpleRun")
