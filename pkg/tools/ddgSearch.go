@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"encoding/json"
+	"libagent/internal/tools"
 	"libagent/pkg/config"
 
 	"github.com/tmc/langchaingo/llms"
@@ -32,17 +33,17 @@ type DDGSearchTool struct {
 	wrappedTool *duckduckgo.Tool
 }
 
-func (s DDGSearchTool) Call(ctx context.Context, input string) (string, error) {
+func (t DDGSearchTool) Call(ctx context.Context, input string) (string, error) {
 	ddgSearchArgs := DDGSearchArgs{}
 	if err := json.Unmarshal([]byte(input), &ddgSearchArgs); err != nil {
 		return "", err
 	}
-	return s.wrappedTool.Call(ctx, ddgSearchArgs.Query)
+	return t.wrappedTool.Call(ctx, ddgSearchArgs.Query)
 }
 
 func init() {
 	globalToolsRegistry = append(globalToolsRegistry,
-		func(ctx context.Context, cfg config.Config) (*ToolData, error) {
+		func(ctx context.Context, cfg config.Config) (*tools.ToolData, error) {
 			if cfg.DDGSearchDisable {
 				return nil, nil
 			}
@@ -65,7 +66,7 @@ func init() {
 				wrappedTool: wrappedTool,
 			}
 
-			return &ToolData{
+			return &tools.ToolData{
 				Definition: DDGSearchDefinition,
 				Call:       ddgSearchTool.Call,
 			}, nil

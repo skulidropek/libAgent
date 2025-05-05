@@ -4,12 +4,20 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"libagent/pkg/tools"
+	"libagent/internal/tools"
 	"regexp"
 	"strings"
 
+	graph "github.com/JackBekket/langgraphgo/graph/stategraph"
 	"github.com/rs/zerolog/log"
 	"github.com/tmc/langchaingo/llms"
+	"github.com/tmc/langchaingo/llms/openai"
+)
+
+const (
+	GraphPlanName  = "plan"
+	GraphToolName  = "tool"
+	GraphSolveName = "solve"
 )
 
 const PromptGetPlan = `For the following task, make plans that can solve the problem step by step. For each plan, indicate
@@ -21,7 +29,7 @@ For example,
 List of tools:
 (1) search[json: {"query": "string"}]: Worker that searches results from Duckduckgo. Useful when you need to find short
 and succinct answers about a specific topic. The input should be a search query.
-(2) ` + tools.LLMToolName + `[string]: A pretrained LLM like yourself. Useful when you need to act with general
+(2) LLM[string]: A pretrained LLM like yourself. Useful when you need to act with general
 world knowledge and common sense. Prioritize it when you are confident in solving the problem
 yourself. Input can be any instruction.
 
@@ -60,6 +68,11 @@ const PromptCallTool = `You will be provided with tool name and arguments for th
 	Arguments: %s
 `
 
+type ReWOO struct {
+	LLM           *openai.LLM
+	ToolsExecutor *tools.ToolsExecutor
+}
+
 type State struct {
 	Task       string
 	PlanString string
@@ -79,17 +92,30 @@ var StepPattern *regexp.Regexp = regexp.MustCompile(
 	`Plan:\s*(.+)\s*(#E\d+)\s*=\s*(\w+)\s*\[([^\]]+)\]`,
 )
 
-func (a Agent) GetPlan(ctx context.Context, s interface{}) (interface{}, error) {
+func (r ReWOO) InitializeGraph() (*graph.Runnable, error) {
+	workflowGraph := graph.NewStateGraph()
+
+	workflowGraph.AddNode("plan", r.GetPlan)
+	workflowGraph.AddNode("tool", r.ToolExecution)
+	workflowGraph.AddNode("solve", r.Solve)
+	workflowGraph.AddEdge("plan", "tool")
+	workflowGraph.AddEdge("solve", graph.END)
+	workflowGraph.AddConditionalEdge("tool", r.Route)
+	workflowGraph.SetEntryPoint("plan")
+	return workflowGraph.Compile()
+}
+
+func (r ReWOO) GetPlan(ctx context.Context, s interface{}) (interface{}, error) {
 	state := s.(State)
 	task := state.Task
 
-	response, err := a.LLM.GenerateContent(ctx,
+	response, err := r.LLM.GenerateContent(ctx,
 		[]llms.MessageContent{
 			llms.TextParts(llms.ChatMessageTypeHuman,
 				fmt.Sprintf(
 					"%s\nList of tools:\n%s\n\n%s",
 					PromptGetPlan,
-					a.ToolsExecutor.ToolsPromptDesc(),
+					r.ToolsExecutor.ToolsPromptDesc(),
 					task,
 				),
 			)},
@@ -122,7 +148,7 @@ func (a Agent) GetPlan(ctx context.Context, s interface{}) (interface{}, error) 
 	return state, nil
 }
 
-func (a Agent) Solve(ctx context.Context, s interface{}) (interface{}, error) {
+func (r ReWOO) Solve(ctx context.Context, s interface{}) (interface{}, error) {
 	state := s.(State)
 
 	plan := ""
@@ -139,7 +165,7 @@ func (a Agent) Solve(ctx context.Context, s interface{}) (interface{}, error) {
 			step.ToolInput,
 		)
 	}
-	response, err := a.LLM.GenerateContent(ctx,
+	response, err := r.LLM.GenerateContent(ctx,
 		[]llms.MessageContent{
 			llms.TextParts(llms.ChatMessageTypeHuman,
 				fmt.Sprintf(PromptSolver, plan, state.Task),
@@ -157,7 +183,7 @@ func (a Agent) Solve(ctx context.Context, s interface{}) (interface{}, error) {
 	return state, nil
 }
 
-func (a Agent) ToolExecution(ctx context.Context, s interface{}) (interface{}, error) {
+func (r ReWOO) ToolExecution(ctx context.Context, s interface{}) (interface{}, error) {
 	state := s.(State)
 
 	step := state.Steps[getCurrentTask(state)]
@@ -169,9 +195,9 @@ func (a Agent) ToolExecution(ctx context.Context, s interface{}) (interface{}, e
 	prompt := fmt.Sprintf(PromptLLMTool, step.ToolInput)
 	options := []llms.CallOption{}
 	content := ""
-	if step.Tool != tools.LLMToolName {
+	if step.Tool != "LLM" {
 		toolDesc := ""
-		for _, tool := range a.ToolsExecutor.Tools {
+		for _, tool := range r.ToolsExecutor.Tools {
 			if tool.Definition.Name == step.Tool {
 				options = append(options, llms.WithTools([]llms.Tool{{
 					Type:     "function",
@@ -197,7 +223,7 @@ func (a Agent) ToolExecution(ctx context.Context, s interface{}) (interface{}, e
 		Str("prompt", prompt).
 		Msg("ReWOO: ToolExecution pre-GenerateContent")
 
-	response, err := a.LLM.GenerateContent(ctx,
+	response, err := r.LLM.GenerateContent(ctx,
 		[]llms.MessageContent{
 			llms.TextParts(llms.ChatMessageTypeHuman,
 				prompt,
@@ -208,13 +234,10 @@ func (a Agent) ToolExecution(ctx context.Context, s interface{}) (interface{}, e
 		return state, err
 	}
 	content = response.Choices[0].Content
-	for _, toolCall := range response.Choices[0].ToolCalls {
-		response, err := a.ToolsExecutor.Execute(ctx, toolCall)
-		if err != nil {
-			log.Warn().Err(err).Msgf("Tool %s call", toolCall.FunctionCall.Name)
-			content = fmt.Sprintf("Error calling tool %s: %v", toolCall.FunctionCall.Name, err)
-		}
-		content = response.Content
+	if toolContent := r.ToolsExecutor.ProcessToolCalls(
+		ctx, response.Choices[0].ToolCalls,
+	); toolContent != "" {
+		content = toolContent
 	}
 	log.Debug().
 		Str("name", step.Name).
@@ -235,7 +258,7 @@ func (a Agent) ToolExecution(ctx context.Context, s interface{}) (interface{}, e
 	return state, nil
 }
 
-func (_ Agent) Route(ctx context.Context, state interface{}) string {
+func (_ ReWOO) Route(ctx context.Context, state interface{}) string {
 	if getCurrentTask(state.(State)) == -1 {
 		return GraphSolveName
 	} else {

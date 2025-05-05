@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"libagent/internal/tools"
 	"libagent/pkg/config"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -102,7 +103,7 @@ func (s SemanticSearchTool) Call(ctx context.Context, input string) (string, err
 
 func init() {
 	globalToolsRegistry = append(globalToolsRegistry,
-		func(ctx context.Context, cfg config.Config) (*ToolData, error) {
+		func(ctx context.Context, cfg config.Config) (*tools.ToolData, error) {
 			if cfg.SemanticSearchDisable {
 				return nil, nil
 			}
@@ -130,7 +131,7 @@ func init() {
 				MaxResults:     cfg.SemanticSearchMaxResults,
 			}
 
-			return &ToolData{
+			return &tools.ToolData{
 				Definition: SemanticSearchDefinition,
 				Call:       semanticSearchTool.Call,
 			}, nil

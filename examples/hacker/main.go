@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"libagent/pkg/agent/rewoo"
+	"libagent/pkg/agent/generic"
 	"libagent/pkg/config"
 	"libagent/pkg/tools"
 	"os"
@@ -14,7 +14,8 @@ import (
 	"github.com/tmc/langchaingo/llms/openai"
 )
 
-const Prompt = `You are a hacking assistant with access to various tools for research.
+const Prompt = `You must use "rewoo" tool with the next argument:
+You are a hacking assistant with access to various tools for research.
 Given user mission - find a possible attack vector and create a plan.
 
 User Mission: 
@@ -37,8 +38,10 @@ func main() {
 	if cfg.Model == "" {
 		log.Fatal().Err(err).Msg("main empty model")
 	}
-	rewooAgent := rewoo.Agent{}
-	ctx := context.WithValue(context.Background(), "ReWOOAgent", &rewooAgent)
+	cfg.SemanticSearchDisable = true
+
+	ctx := context.Background()
+	agent := generic.Agent{}
 
 	llm, err := openai.New(
 		openai.WithBaseURL(cfg.AIURL),
@@ -49,14 +52,13 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("openai.New")
 	}
-	rewooAgent.LLM = llm
+	agent.LLM = llm
 
-	cfg.SemanticSearchDisable = true
 	toolsExecutor, err := tools.NewToolsExecutor(ctx, cfg)
 	if err != nil {
 		log.Fatal().Err(err).Msg("tools.NewToolsExecutor")
 	}
-	rewooAgent.ToolsExecutor = toolsExecutor
+	agent.ToolsExecutor = toolsExecutor
 
 	fmt.Println("Enter you task:")
 	userMission := ""
@@ -65,7 +67,7 @@ func main() {
 		userMission = scanner.Text()
 	}
 
-	result, err := rewooAgent.SimpleRun(ctx, fmt.Sprintf(Prompt, userMission))
+	result, err := agent.SimpleRun(ctx, fmt.Sprintf(Prompt, userMission))
 	if err != nil {
 		log.Fatal().Err(err).Msg("main rewooAgent.SimpleRun")
 	}

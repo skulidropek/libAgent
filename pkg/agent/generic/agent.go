@@ -3,10 +3,8 @@ package generic
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"libagent/pkg/tools"
+	"libagent/internal/tools"
 
-	"github.com/rs/zerolog/log"
 	"github.com/tmc/langchaingo/llms"
 	"github.com/tmc/langchaingo/llms/openai"
 )
@@ -22,16 +20,37 @@ func (a *Agent) Run(
 	ctx context.Context,
 	state []llms.MessageContent,
 ) (llms.MessageContent, error) {
-	// TODO integrate regular chat flow into generic agent
-	// this is messageGraph agent, not stateGraph agent as reasoning without obsrvation agent
-	return llms.MessageContent{}, nil
+	if a.toolsList == nil {
+		a.toolsList = &[]llms.Tool{}
+	}
+	if len(*a.toolsList) == 0 {
+		*a.toolsList = a.ToolsExecutor.ToolsList()
+	}
+
+	response, err := a.LLM.GenerateContent(
+		ctx, state, llms.WithTools(*a.toolsList),
+	)
+	if err != nil {
+		return llms.MessageContent{}, err
+	}
+
+	content := response.Choices[0].Content
+	if toolContent := a.ToolsExecutor.ProcessToolCalls(
+		ctx, response.Choices[0].ToolCalls,
+	); toolContent != "" {
+		content = toolContent
+	}
+
+	return llms.TextParts(llms.ChatMessageTypeAI, content), nil
 }
 
 func (a *Agent) SimpleRun(
 	ctx context.Context,
 	input string,
 ) (string, error) {
-
+	if a.toolsList == nil {
+		a.toolsList = &[]llms.Tool{}
+	}
 	if len(*a.toolsList) == 0 {
 		*a.toolsList = a.ToolsExecutor.ToolsList()
 	}
@@ -48,14 +67,10 @@ func (a *Agent) SimpleRun(
 	}
 
 	content := response.Choices[0].Content
-	for _, toolCall := range response.Choices[0].ToolCalls {
-		response, err := a.ToolsExecutor.Execute(ctx, toolCall)
-		if err != nil {
-			log.Warn().Err(err).Msgf("Tool %s call", toolCall.FunctionCall.Name)
-			content = fmt.Sprintf("Error calling tool %s: %v", toolCall.FunctionCall.Name, err)
-			continue
-		}
-		content = response.Content
+	if toolContent := a.ToolsExecutor.ProcessToolCalls(
+		ctx, response.Choices[0].ToolCalls,
+	); toolContent != "" {
+		content = toolContent
 	}
 
 	jsonSafeContent, err := json.Marshal(content)
@@ -64,4 +79,12 @@ func (a *Agent) SimpleRun(
 	}
 
 	return string(jsonSafeContent), nil
+}
+
+func (a Agent) GetLLM() *openai.LLM {
+	return a.LLM
+}
+
+func (a Agent) GetToolsExecutor() *tools.ToolsExecutor {
+	return a.ToolsExecutor
 }

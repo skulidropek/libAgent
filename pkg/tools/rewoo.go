@@ -3,10 +3,13 @@ package tools
 import (
 	"context"
 	"encoding/json"
-	"libagent/pkg/agent"
+	"libagent/internal/tools"
+	"libagent/internal/tools/rewoo"
 	"libagent/pkg/config"
 
+	graph "github.com/JackBekket/langgraphgo/graph/stategraph"
 	"github.com/tmc/langchaingo/llms"
+	"github.com/tmc/langchaingo/llms/openai"
 )
 
 var ReWOOToolDefinition = llms.FunctionDefinition{
@@ -32,25 +35,57 @@ type ReWOOToolArgs struct {
 }
 
 type ReWOOTool struct {
-	agent agent.Agent
+	ReWOO rewoo.ReWOO
+	Graph *graph.Runnable
 }
 
-func (s ReWOOTool) Call(ctx context.Context, input string) (string, error) {
+func (t *ReWOOTool) Call(ctx context.Context, input string) (string, error) {
 	rewooToolArgs := ReWOOToolArgs{}
 	if err := json.Unmarshal([]byte(input), &rewooToolArgs); err != nil {
 		return "", err
 	}
-	return s.agent.SimpleRun(ctx, rewooToolArgs.Query)
+
+	if t.ReWOO.ToolsExecutor == nil {
+		t.ReWOO.ToolsExecutor = globalToolsExecutor
+	}
+	if t.Graph == nil {
+		if g, err := t.ReWOO.InitializeGraph(); err != nil {
+			return "", err
+		} else {
+			t.Graph = g
+		}
+	}
+
+	state, err := t.Graph.Invoke(ctx, rewoo.State{
+		Task: input,
+	})
+	if err != nil {
+		return "", err
+	}
+
+	return state.(rewoo.State).Result, nil
 }
 
 func init() {
 	globalToolsRegistry = append(globalToolsRegistry,
-		func(ctx context.Context, cfg config.Config) (*ToolData, error) {
-			rewooTool := ReWOOTool{
-				agent: ctx.Value("ReWOOAgent").(agent.Agent),
+		func(ctx context.Context, cfg config.Config) (*tools.ToolData, error) {
+			llm, err := openai.New(
+				openai.WithBaseURL(cfg.AIURL),
+				openai.WithToken(cfg.AIToken),
+				openai.WithModel(cfg.Model),
+				openai.WithAPIVersion("v1"),
+			)
+			if err != nil {
+				return nil, err
 			}
 
-			return &ToolData{
+			rewooTool := ReWOOTool{
+				ReWOO: rewoo.ReWOO{
+					LLM: llm,
+				},
+			}
+
+			return &tools.ToolData{
 				Definition: ReWOOToolDefinition,
 				Call:       rewooTool.Call,
 			}, nil

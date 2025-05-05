@@ -1,11 +1,8 @@
-package tools
+package webreader
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
 	"io"
-	"libagent/pkg/config"
 	"net/http"
 	"strings"
 	"time"
@@ -15,57 +12,9 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/proto"
-	"github.com/tmc/langchaingo/llms"
 )
 
-var WebReaderDefinition = llms.FunctionDefinition{
-	Name: "webReader",
-	Description: `Uses provided valid URL and provides a markdown text converted from html for ease of read.
-		Please be sure to put a valid URL here, you can use LLM tool to extract it from query before using it in this tool.`,
-	Parameters: map[string]any{
-		"type": "object",
-		"properties": map[string]any{
-			"url": map[string]any{
-				"type":        "string",
-				"description": "The valid url to read as text from.",
-			},
-		},
-	},
-}
-
-type WebReaderArgs struct {
-	URL string `json:"url"`
-}
-
-type WebReaderTool struct {
-}
-
-func (s WebReaderTool) Call(ctx context.Context, input string) (string, error) {
-	webReaderArgs := WebReaderArgs{}
-	if err := json.Unmarshal([]byte(input), &webReaderArgs); err != nil {
-		return "", err
-	}
-
-	return processUrl(webReaderArgs.URL)
-}
-
-func init() {
-	globalToolsRegistry = append(globalToolsRegistry,
-		func(ctx context.Context, cfg config.Config) (*ToolData, error) {
-			if cfg.WebReaderDisable {
-				return nil, nil
-			}
-			webReaderTool := WebReaderTool{}
-
-			return &ToolData{
-				Definition: WebReaderDefinition,
-				Call:       webReaderTool.Call,
-			}, nil
-		},
-	)
-}
-
-func processUrl(u string) (string, error) {
+func ProcessUrl(u string) (string, error) {
 	requiresJS, err := checkNoScript(u)
 	if err != nil {
 		return "", err
