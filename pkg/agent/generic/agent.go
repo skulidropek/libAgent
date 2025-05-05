@@ -3,8 +3,10 @@ package generic
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"libagent/pkg/tools"
 
+	"github.com/rs/zerolog/log"
 	"github.com/tmc/langchaingo/llms"
 	"github.com/tmc/langchaingo/llms/openai"
 )
@@ -49,7 +51,9 @@ func (a *Agent) SimpleRun(
 	for _, toolCall := range response.Choices[0].ToolCalls {
 		response, err := a.ToolsExecutor.Execute(ctx, toolCall)
 		if err != nil {
-			return "", err
+			log.Warn().Err(err).Msgf("Tool %s call", toolCall.FunctionCall.Name)
+			content = fmt.Sprintf("Error calling tool %s: %v", toolCall.FunctionCall.Name, err)
+			continue
 		}
 		content = response.Content
 	}

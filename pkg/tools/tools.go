@@ -35,6 +35,9 @@ func NewToolsExecutor(ctx context.Context, cfg config.Config) (*ToolsExecutor, e
 		if err != nil {
 			return nil, err
 		}
+		if tool == nil {
+			continue
+		}
 		tools[tool.Definition.Name] = tool
 	}
 	toolsExecutor.Tools = tools
@@ -82,7 +85,7 @@ func (e ToolsExecutor) ToolsPromptDesc() string {
 			Name: LLMToolName,
 			Description: `A pretrained LLM like yourself. Useful when you need to act with general
 world knowledge and common sense. Prioritize it when you are confident in solving the problem
-yourself. Input can be any instruction.`,
+yourself. Input can be any instruction or task.`,
 		},
 	}
 	for _, toolData := range e.Tools {

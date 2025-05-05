@@ -12,17 +12,21 @@ import (
 
 type Config struct {
 	AIURL   string `env:"AI_URL"`
-	ApiToken string `env:"API_TOKEN"`
-	Model       string `env:"MODEL"`
+	AIToken string `env:"AI_TOKEN"`
+	Model   string `env:"MODEL"`
 
-	SemanticSearchOpenAIURL      string `env:"AI_URL,SEMANTIC_SEARCH_OPENAI_URL"`
-	SemanticSearchOpenAIToken    string `env:"API_TOKEN,SEMANTIC_SEARCH_OPENAI_TOKEN"`
+	SemanticSearchDisable        bool   `env:"SEMANTIC_SEARCH_DISABLE"`
+	SemanticSearchAIURL          string `env:"AI_URL,SEMANTIC_SEARCH_AI_URL"`
+	SemanticSearchAIToken        string `env:"AI_TOKEN,SEMANTIC_SEARCH_AI_TOKEN"`
 	SemanticSearchDBConnection   string `env:"SEMANTIC_SEARCH_DB_CONNECTION"`
 	SemanticSearchEmbeddingModel string `env:"SEMANTIC_SEARCH_EMBEDDING_MODEL"`
 	SemanticSearchMaxResults     int    `env:"SEMANTIC_SEARCH_MAX_RESULTS"`
 
+	DDGSearchDisable    bool   `env:"DDG_SEARCH_DISABLE"`
 	DDGSearchUserAgent  string `env:"DDG_SEARCH_USER_AGENT"`
 	DDGSearchMaxResults int    `env:"DDG_SEARCH_MAX_RESULTS"`
+
+	WebReaderDisable bool `env:"WEB_READER_DISABLE"`
 }
 
 func NewConfig() (Config, error) {

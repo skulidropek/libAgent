@@ -10,13 +10,15 @@ import (
 )
 
 var DDGSearchDefinition = llms.FunctionDefinition{
-	Name: "search",
+	Name: "webSearch",
+	Description: `A duckduckgo search wrapper.
+Given search query returns a multiple results with short descriptions and URLs.`,
 	Parameters: map[string]any{
 		"type": "object",
 		"properties": map[string]any{
 			"query": map[string]any{
 				"type":        "string",
-				"description": "The search query",
+				"description": "The duckduckgo search query",
 			},
 		},
 	},
@@ -41,6 +43,9 @@ func (s DDGSearchTool) Call(ctx context.Context, input string) (string, error) {
 func init() {
 	globalToolsRegistry = append(globalToolsRegistry,
 		func(ctx context.Context, cfg config.Config) (*ToolData, error) {
+			if cfg.DDGSearchDisable {
+				return nil, nil
+			}
 			if cfg.DDGSearchMaxResults == 0 {
 				cfg.DDGSearchMaxResults = 5
 			}
@@ -60,7 +65,6 @@ func init() {
 				wrappedTool: wrappedTool,
 			}
 
-			DDGSearchDefinition.Description = wrappedTool.Description()
 			return &ToolData{
 				Definition: DDGSearchDefinition,
 				Call:       ddgSearchTool.Call,

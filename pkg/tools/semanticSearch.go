@@ -103,10 +103,13 @@ func (s SemanticSearchTool) Call(ctx context.Context, input string) (string, err
 func init() {
 	globalToolsRegistry = append(globalToolsRegistry,
 		func(ctx context.Context, cfg config.Config) (*ToolData, error) {
-			if cfg.SemanticSearchOpenAIURL == "" {
+			if cfg.SemanticSearchDisable {
+				return nil, nil
+			}
+			if cfg.SemanticSearchAIURL == "" {
 				return nil, fmt.Errorf("semantic search empty OpenAI URL")
 			}
-			if cfg.SemanticSearchOpenAIToken == "" {
+			if cfg.SemanticSearchAIToken == "" {
 				return nil, fmt.Errorf("semantic search empty OpenAI Token")
 			}
 			if cfg.SemanticSearchDBConnection == "" {
@@ -120,8 +123,8 @@ func init() {
 			}
 
 			semanticSearchTool := &SemanticSearchTool{
-				OpenAIURL:      cfg.SemanticSearchOpenAIURL,
-				OpenAIToken:    cfg.SemanticSearchOpenAIToken,
+				OpenAIURL:      cfg.SemanticSearchAIURL,
+				OpenAIToken:    cfg.SemanticSearchAIToken,
 				DBConnection:   cfg.SemanticSearchDBConnection,
 				EmbeddingModel: cfg.SemanticSearchEmbeddingModel,
 				MaxResults:     cfg.SemanticSearchMaxResults,
