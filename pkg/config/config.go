@@ -27,6 +27,10 @@ type Config struct {
 	DDGSearchMaxResults int    `env:"DDG_SEARCH_MAX_RESULTS"`
 
 	WebReaderDisable bool `env:"WEB_READER_DISABLE"`
+
+	NmapDisable bool `env:"NMAP_DISABLE"`
+
+	SimpleCMDExecutorDisable bool `env:"SIMPLE_CMD_EXECUTOR_DISABLE"`
 }
 
 func NewConfig() (Config, error) {

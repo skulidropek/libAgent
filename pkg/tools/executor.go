@@ -27,6 +27,9 @@ func (s SimpleCommandExecutor) Call(ctx context.Context, input string) (string, 
 func init() {
 	globalToolsRegistry = append(globalToolsRegistry,
 		func(ctx context.Context, cfg config.Config) (*tools.ToolData, error) {
+			if cfg.SimpleCMDExecutorDisable {
+				return nil, nil
+			}
 			return &tools.ToolData{
 				Definition: llms.FunctionDefinition{
 					Name:        "simpleCommandExecutor",

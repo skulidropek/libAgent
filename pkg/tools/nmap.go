@@ -26,6 +26,10 @@ func (s Nmap) Call(ctx context.Context, input string) (string, error) {
 func init() {
 	globalToolsRegistry = append(globalToolsRegistry,
 		func(ctx context.Context, cfg config.Config) (*tools.ToolData, error) {
+			if cfg.NmapDisable {
+				return nil, nil
+			}
+
 			return &tools.ToolData{
 				Definition: llms.FunctionDefinition{
 					Name:        "Nmap",
