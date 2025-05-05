@@ -3,19 +3,17 @@ package main
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
-	"libagent/pkg/agent/generic"
 	"libagent/pkg/config"
 	"libagent/pkg/tools"
 	"os"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"github.com/tmc/langchaingo/llms/openai"
 )
 
-const Prompt = `You must use "rewoo" tool with the next argument:
-You are a hacking assistant with access to various tools for research.
+const Prompt = `You are a hacking assistant with access to various tools for research.
 Given user mission - find a possible attack vector and create a plan.
 
 User Mission: 
@@ -43,24 +41,11 @@ func main() {
 	cfg.NmapDisable = true
 
 	ctx := context.Background()
-	agent := generic.Agent{}
-
-	llm, err := openai.New(
-		openai.WithBaseURL(cfg.AIURL),
-		openai.WithToken(cfg.AIToken),
-		openai.WithModel(cfg.Model),
-		openai.WithAPIVersion("v1"),
-	)
-	if err != nil {
-		log.Fatal().Err(err).Msg("openai.New")
-	}
-	agent.LLM = llm
 
 	toolsExecutor, err := tools.NewToolsExecutor(ctx, cfg)
 	if err != nil {
 		log.Fatal().Err(err).Msg("tools.NewToolsExecutor")
 	}
-	agent.ToolsExecutor = toolsExecutor
 
 	fmt.Println("Enter you task:")
 	userMission := ""
@@ -69,9 +54,17 @@ func main() {
 		userMission = scanner.Text()
 	}
 
-	result, err := agent.SimpleRun(ctx, fmt.Sprintf(Prompt, userMission))
+	rewooQuery := tools.ReWOOToolArgs{
+		Query: fmt.Sprintf(Prompt, userMission),
+	}
+	rewooQueryBytes, err := json.Marshal(rewooQuery)
 	if err != nil {
-		log.Fatal().Err(err).Msg("main rewooAgent.SimpleRun")
+		log.Fatal().Err(err).Msg("json.Marhsal rewooQuery")
+	}
+
+	result, err := toolsExecutor.Tools["rewoo"].Call(ctx, string(rewooQueryBytes))
+	if err != nil {
+		log.Fatal().Err(err).Msg("toolsExecutor.Tools[rewoo].Call")
 	}
 
 	if result == "" {
