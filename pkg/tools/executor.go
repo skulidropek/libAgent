@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"libagent/internal/tools"
 	"libagent/pkg/config"
 	"os/exec"
 
@@ -13,26 +14,26 @@ type SimpleCommandExecutor struct{}
 
 // Call executes the command with the given arguments.
 func (s SimpleCommandExecutor) Call(ctx context.Context, input string) (string, error) {
-   // args := input
-    cmd := exec.Command(input)
+	// args := input
+	cmd := exec.Command(input)
 
-    output, err := cmd.CombinedOutput()
-    if err != nil {
-        return "", err
-    }
-    return string(output), nil
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", err
+	}
+	return string(output), nil
 }
 
 func init() {
-    globalToolsRegistry = append(globalToolsRegistry,
-        func(ctx context.Context, cfg config.Config) (*ToolData, error) {
-            return &ToolData{
-                Definition: llms.FunctionDefinition{
-                    Name: "simpleCommandExecutor",
-                    Description: "Executes a command with provided arguments using exec.Command.",
-                },
-                Call: SimpleCommandExecutor{}.Call,
-            }, nil
-        },
-    )
+	globalToolsRegistry = append(globalToolsRegistry,
+		func(ctx context.Context, cfg config.Config) (*tools.ToolData, error) {
+			return &tools.ToolData{
+				Definition: llms.FunctionDefinition{
+					Name:        "simpleCommandExecutor",
+					Description: "Executes a command with provided arguments using exec.Command.",
+				},
+				Call: SimpleCommandExecutor{}.Call,
+			}, nil
+		},
+	)
 }
