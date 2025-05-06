@@ -4,9 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"libagent/internal/tools"
 	"regexp"
 	"strings"
+
+	"github.com/Swarmind/libagent/internal/tools"
 
 	graph "github.com/JackBekket/langgraphgo/graph/stategraph"
 	"github.com/rs/zerolog/log"

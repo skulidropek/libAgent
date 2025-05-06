@@ -3,9 +3,10 @@ package tools
 import (
 	"context"
 	"encoding/json"
-	"libagent/internal/tools"
-	webreader "libagent/internal/tools/webReader"
-	"libagent/pkg/config"
+
+	"github.com/Swarmind/libagent/internal/tools"
+	webreader "github.com/Swarmind/libagent/internal/tools/webReader"
+	"github.com/Swarmind/libagent/pkg/config"
 
 	"github.com/tmc/langchaingo/llms"
 )

@@ -3,9 +3,10 @@ package tools
 import (
 	"context"
 	"encoding/json"
-	"libagent/internal/tools"
-	"libagent/pkg/config"
 	"os/exec"
+
+	"github.com/Swarmind/libagent/internal/tools"
+	"github.com/Swarmind/libagent/pkg/config"
 
 	"github.com/tmc/langchaingo/llms"
 )

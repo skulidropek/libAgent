@@ -2,8 +2,9 @@ package tools
 
 import (
 	"context"
-	"libagent/internal/tools"
-	"libagent/pkg/config"
+
+	"github.com/Swarmind/libagent/internal/tools"
+	"github.com/Swarmind/libagent/pkg/config"
 )
 
 var globalToolsRegistry = []func(context.Context, config.Config) (*tools.ToolData, error){}

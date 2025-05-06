@@ -3,10 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
-	"libagent/pkg/agent/generic"
-	"libagent/pkg/config"
-	"libagent/pkg/tools"
 	"os"
+
+	"github.com/Swarmind/libagent/pkg/agent/generic"
+	"github.com/Swarmind/libagent/pkg/config"
+	"github.com/Swarmind/libagent/pkg/tools"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"

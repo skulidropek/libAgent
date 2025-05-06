@@ -5,9 +5,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"libagent/pkg/config"
-	"libagent/pkg/tools"
 	"os"
+
+	"github.com/Swarmind/libagent/pkg/config"
+	"github.com/Swarmind/libagent/pkg/tools"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"

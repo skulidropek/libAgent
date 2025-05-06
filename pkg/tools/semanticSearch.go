@@ -4,8 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"libagent/internal/tools"
-	"libagent/pkg/config"
+
+	"github.com/Swarmind/libagent/internal/tools"
+	"github.com/Swarmind/libagent/pkg/config"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/tmc/langchaingo/embeddings"

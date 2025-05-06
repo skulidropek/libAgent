@@ -3,7 +3,8 @@ package generic
 import (
 	"context"
 	"encoding/json"
-	"libagent/internal/tools"
+
+	"github.com/Swarmind/libagent/internal/tools"
 
 	"github.com/tmc/langchaingo/llms"
 	"github.com/tmc/langchaingo/llms/openai"

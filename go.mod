@@ -1,4 +1,4 @@
-module libagent
+module github.com/Swarmind/libagent
 
 go 1.24.2
 

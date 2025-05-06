@@ -3,9 +3,10 @@ package tools
 import (
 	"context"
 	"encoding/json"
-	"libagent/internal/tools"
-	"libagent/internal/tools/rewoo"
-	"libagent/pkg/config"
+
+	"github.com/Swarmind/libagent/internal/tools"
+	"github.com/Swarmind/libagent/internal/tools/rewoo"
+	"github.com/Swarmind/libagent/pkg/config"
 
 	graph "github.com/JackBekket/langgraphgo/graph/stategraph"
 	"github.com/tmc/langchaingo/llms"
