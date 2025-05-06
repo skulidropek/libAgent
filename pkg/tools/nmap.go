@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"encoding/json"
 	"libagent/internal/tools"
 	"libagent/pkg/config"
 	"os/exec"
@@ -9,12 +10,33 @@ import (
 	"github.com/tmc/langchaingo/llms"
 )
 
-type Nmap struct{}
+var NmapToolDefinition = llms.FunctionDefinition{
+	Name:        "nmap",
+	Description: "Executes nmap (scanning ports of) target address",
+	Parameters: map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"ip": map[string]any{
+				"type":        "string",
+				"description": "The valid IP address to scan to.",
+			},
+		},
+	},
+}
+
+type NmapTool struct{}
+
+type NmapToolArgs struct {
+	IP string `json:"ip"`
+}
 
 // Call executes the command with the given arguments.
-func (s Nmap) Call(ctx context.Context, input string) (string, error) {
-	args := input
-	cmd := exec.Command("nmap -v -T4 -PA -sV --version-all --osscan-guess -A -sS -p 1-65535", args)
+func (s NmapTool) Call(ctx context.Context, input string) (string, error) {
+	nmapToolArgs := NmapToolArgs{}
+	if err := json.Unmarshal([]byte(input), &nmapToolArgs); err != nil {
+		return "", err
+	}
+	cmd := exec.Command("nmap", "-v", "-T4", "-PA", "-sV", "--version-all", "-osscan-guess", "-A", "-sS", "-p", "1-65535", nmapToolArgs.IP)
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -31,11 +53,8 @@ func init() {
 			}
 
 			return &tools.ToolData{
-				Definition: llms.FunctionDefinition{
-					Name:        "Nmap",
-					Description: "Executes nmap (scanning ports of) target address",
-				},
-				Call: Nmap{}.Call,
+				Definition: NmapToolDefinition,
+				Call:       NmapTool{}.Call,
 			}, nil
 		},
 	)

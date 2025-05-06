@@ -2,20 +2,44 @@ package tools
 
 import (
 	"context"
+	"encoding/json"
 	"libagent/internal/tools"
 	"libagent/pkg/config"
 	"os/exec"
+	"strings"
 
 	"github.com/tmc/langchaingo/llms"
 )
 
-// SimpleCommandExecutor represents a tool that executes commands using exec.Command.
-type SimpleCommandExecutor struct{}
+var SimpleCommandExecutorDefinition = llms.FunctionDefinition{
+	Name:        "simpleCommandExecutor",
+	Description: "Executes a shell command with provided arguments using exec.Command.",
+	Parameters: map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"command": map[string]any{
+				"type":        "string",
+				"description": "the shell command to execute to.",
+			},
+		},
+	},
+}
+
+type SimpleCommandExecutorArgs struct {
+	Command string `json:"command"`
+}
+
+// SimpleCommandExecutorTool represents a tool that executes commands using exec.Command.
+type SimpleCommandExecutorTool struct{}
 
 // Call executes the command with the given arguments.
-func (s SimpleCommandExecutor) Call(ctx context.Context, input string) (string, error) {
-	// args := input
-	cmd := exec.Command(input)
+func (s SimpleCommandExecutorTool) Call(ctx context.Context, input string) (string, error) {
+	simpleCommandExecutorArgs := SimpleCommandExecutorArgs{}
+	if err := json.Unmarshal([]byte(input), &simpleCommandExecutorArgs); err != nil {
+		return "", err
+	}
+	args := strings.Fields(simpleCommandExecutorArgs.Command)
+	cmd := exec.Command(args[0], args[1:]...)
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -31,11 +55,8 @@ func init() {
 				return nil, nil
 			}
 			return &tools.ToolData{
-				Definition: llms.FunctionDefinition{
-					Name:        "simpleCommandExecutor",
-					Description: "Executes a command with provided arguments using exec.Command.",
-				},
-				Call: SimpleCommandExecutor{}.Call,
+				Definition: SimpleCommandExecutorDefinition,
+				Call:       SimpleCommandExecutorTool{}.Call,
 			}, nil
 		},
 	)

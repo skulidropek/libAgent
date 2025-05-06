@@ -37,8 +37,6 @@ func main() {
 		log.Fatal().Err(err).Msg("main empty model")
 	}
 	cfg.SemanticSearchDisable = true
-	cfg.SimpleCMDExecutorDisable = true
-	cfg.NmapDisable = true
 
 	ctx := context.Background()
 
