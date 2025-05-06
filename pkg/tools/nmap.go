@@ -33,7 +33,7 @@ func init() {
 			return &tools.ToolData{
 				Definition: llms.FunctionDefinition{
 					Name:        "Nmap",
-					Description: "Executes nmap (scanning ports of) target address",
+					Description: "Executes `nmap -v -T4 -PA -sV --version-all --osscan-guess -A -sS -p 1-65535 `",
 				},
 				Call: Nmap{}.Call,
 			}, nil
