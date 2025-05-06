@@ -13,7 +13,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-const Prompt = `You are a hacking assistant with access to various tools for research.
+const Prompt = `You are a hacking assistant with access to various tools for research, such as nmap.
 Given user mission - find a possible attack vector and create a plan.
 
 User Mission: 
