@@ -70,6 +70,9 @@ func (t *ReWOOTool) Call(ctx context.Context, input string) (string, error) {
 func init() {
 	globalToolsRegistry = append(globalToolsRegistry,
 		func(ctx context.Context, cfg config.Config) (*tools.ToolData, error) {
+			if cfg.ReWOODisable {
+				return nil, nil
+			}
 			llm, err := openai.New(
 				openai.WithBaseURL(cfg.AIURL),
 				openai.WithToken(cfg.AIToken),

@@ -29,13 +29,13 @@ func main() {
 		log.Fatal().Err(err).Msg("config.NewConfig")
 	}
 	if cfg.AIURL == "" {
-		log.Fatal().Err(err).Msg("main empty OpenAI URL")
+		log.Fatal().Err(err).Msg("empty AI URL")
 	}
 	if cfg.AIToken == "" {
-		log.Fatal().Err(err).Msg("main empty OpenAI Token")
+		log.Fatal().Err(err).Msg("empty AI Token")
 	}
 	if cfg.Model == "" {
-		log.Fatal().Err(err).Msg("main empty model")
+		log.Fatal().Err(err).Msg("empty model")
 	}
 
 	ctx := context.Background()
@@ -60,7 +60,7 @@ func main() {
 
 	result, err := agent.SimpleRun(ctx, Prompt)
 	if err != nil {
-		log.Fatal().Err(err).Msg("main rewooAgent.SimpleRun")
+		log.Fatal().Err(err).Msg("rewooAgent.SimpleRun")
 	}
 	fmt.Println(result)
 }

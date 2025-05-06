@@ -18,6 +18,8 @@ type Config struct {
 	AIToken string `env:"AI_TOKEN"`
 	Model   string `env:"MODEL"`
 
+	ReWOODisable bool `env:"REWOO_DISABLE"`
+
 	SemanticSearchDisable        bool   `env:"SEMANTIC_SEARCH_DISABLE"`
 	SemanticSearchAIURL          string `env:"AI_URL,SEMANTIC_SEARCH_AI_URL"`
 	SemanticSearchAIToken        string `env:"AI_TOKEN,SEMANTIC_SEARCH_AI_TOKEN"`

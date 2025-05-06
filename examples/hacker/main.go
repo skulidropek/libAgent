@@ -26,16 +26,16 @@ func main() {
 
 	cfg, err := config.NewConfig()
 	if err != nil {
-		log.Fatal().Err(err).Msg("config.NewConfig")
+		log.Fatal().Err(err).Msg("new config")
 	}
 	if cfg.AIURL == "" {
-		log.Fatal().Err(err).Msg("main empty OpenAI URL")
+		log.Fatal().Err(err).Msg("empty OpenAI URL")
 	}
 	if cfg.AIToken == "" {
-		log.Fatal().Err(err).Msg("main empty OpenAI Token")
+		log.Fatal().Err(err).Msg("empty OpenAI Token")
 	}
 	if cfg.Model == "" {
-		log.Fatal().Err(err).Msg("main empty model")
+		log.Fatal().Err(err).Msg("empty model")
 	}
 	cfg.SemanticSearchDisable = true
 
@@ -43,7 +43,7 @@ func main() {
 
 	toolsExecutor, err := tools.NewToolsExecutor(ctx, cfg)
 	if err != nil {
-		log.Fatal().Err(err).Msg("tools.NewToolsExecutor")
+		log.Fatal().Err(err).Msg("new tools executor")
 	}
 
 	fmt.Println("Enter you task:")
@@ -58,12 +58,12 @@ func main() {
 	}
 	rewooQueryBytes, err := json.Marshal(rewooQuery)
 	if err != nil {
-		log.Fatal().Err(err).Msg("json.Marhsal rewooQuery")
+		log.Fatal().Err(err).Msg("json marhsal rewooQuery")
 	}
 
 	result, err := toolsExecutor.Tools["rewoo"].Call(ctx, string(rewooQueryBytes))
 	if err != nil {
-		log.Fatal().Err(err).Msg("toolsExecutor.Tools[rewoo].Call")
+		log.Fatal().Err(err).Msg("rewoo tool call")
 	}
 
 	if result == "" {
