@@ -8,7 +8,10 @@ import (
 	"strings"
 
 	"github.com/joho/godotenv"
+	"github.com/rs/zerolog/log"
 )
+
+const EnvPrefixKey = "LIBAGENT_ENV_PREFIX"
 
 type Config struct {
 	AIURL   string `env:"AI_URL"`
@@ -38,7 +41,12 @@ func NewConfig() (Config, error) {
 
 	err := godotenv.Load()
 	if err != nil {
-		return cfg, fmt.Errorf("godotenv failed to load .env: %w", err)
+		log.Warn().Err(err).Msg(".env file load")
+	}
+
+	envPrefix := os.Getenv(EnvPrefixKey)
+	if envPrefix != "" && strings.HasSuffix(envPrefix, "_") {
+		envPrefix = strings.TrimSuffix(envPrefix, "_")
 	}
 
 	val := reflect.ValueOf(&cfg).Elem()
@@ -54,6 +62,9 @@ func NewConfig() (Config, error) {
 		envValue := ""
 		for _, key := range strings.Split(envTag, ",") {
 			key = strings.TrimSpace(key)
+			if envPrefix != "" {
+				key = strings.Join([]string{envPrefix, key}, "_")
+			}
 			if value, ok := os.LookupEnv(key); ok && value != "" {
 				envValue = value
 			}
