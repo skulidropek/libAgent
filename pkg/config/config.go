@@ -58,31 +58,32 @@ func NewConfig() (Config, error) {
 				envValue = value
 			}
 		}
+		if envValue == "" {
+			continue
+		}
 
-		if envValue != "" {
-			fieldVal := val.Field(i)
-			switch fieldVal.Kind() {
-			case reflect.String:
-				fieldVal.SetString(envValue)
-			case reflect.Int:
-				intValue, err := strconv.Atoi(envValue)
-				if err != nil {
-					return Config{}, fmt.Errorf(
-						"failed to parse int for field '%s' from env '%s': %w",
-						field.Name, envTag, err,
-					)
-				}
-				fieldVal.SetInt(int64(intValue))
-			case reflect.Bool:
-				boolValue, err := strconv.ParseBool(strings.ToLower(envValue))
-				if err != nil {
-					return Config{}, fmt.Errorf(
-						"failed to parse bool for field '%s' from env '%s': %w",
-						field.Name, envTag, err,
-					)
-				}
-				fieldVal.SetBool(boolValue)
+		fieldVal := val.Field(i)
+		switch fieldVal.Kind() {
+		case reflect.String:
+			fieldVal.SetString(envValue)
+		case reflect.Int:
+			intValue, err := strconv.Atoi(envValue)
+			if err != nil {
+				return Config{}, fmt.Errorf(
+					"failed to parse int for field '%s' from env '%s': %w",
+					field.Name, envTag, err,
+				)
 			}
+			fieldVal.SetInt(int64(intValue))
+		case reflect.Bool:
+			boolValue, err := strconv.ParseBool(strings.ToLower(envValue))
+			if err != nil {
+				return Config{}, fmt.Errorf(
+					"failed to parse bool for field '%s' from env '%s': %w",
+					field.Name, envTag, err,
+				)
+			}
+			fieldVal.SetBool(boolValue)
 		}
 	}
 
