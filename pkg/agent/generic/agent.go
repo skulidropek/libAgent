@@ -20,6 +20,7 @@ type Agent struct {
 func (a *Agent) Run(
 	ctx context.Context,
 	state []llms.MessageContent,
+	opts ...llms.CallOption,
 ) (llms.MessageContent, error) {
 	if a.toolsList == nil {
 		a.toolsList = &[]llms.Tool{}
@@ -28,8 +29,10 @@ func (a *Agent) Run(
 		*a.toolsList = a.ToolsExecutor.ToolsList()
 	}
 
+	opts = append(opts, llms.WithTools(*a.toolsList))
+
 	response, err := a.LLM.GenerateContent(
-		ctx, state, llms.WithTools(*a.toolsList),
+		ctx, state, opts...,
 	)
 	if err != nil {
 		return llms.MessageContent{}, err
@@ -48,6 +51,7 @@ func (a *Agent) Run(
 func (a *Agent) SimpleRun(
 	ctx context.Context,
 	input string,
+	opts ...llms.CallOption,
 ) (string, error) {
 	if a.toolsList == nil {
 		a.toolsList = &[]llms.Tool{}
@@ -56,12 +60,14 @@ func (a *Agent) SimpleRun(
 		*a.toolsList = a.ToolsExecutor.ToolsList()
 	}
 
+	opts = append(opts, llms.WithTools(*a.toolsList))
+
 	response, err := a.LLM.GenerateContent(ctx,
 		[]llms.MessageContent{
 			llms.TextParts(llms.ChatMessageTypeHuman,
 				input,
 			)},
-		llms.WithTools(*a.toolsList),
+		opts...,
 	)
 	if err != nil {
 		return "", err
