@@ -37,7 +37,7 @@ type ReWOOToolArgs struct {
 
 type ReWOOTool struct {
 	ReWOO rewoo.ReWOO
-	Graph *graph.Runnable
+	graph *graph.Runnable
 }
 
 func (t *ReWOOTool) Call(ctx context.Context, input string) (string, error) {
@@ -49,15 +49,15 @@ func (t *ReWOOTool) Call(ctx context.Context, input string) (string, error) {
 	if t.ReWOO.ToolsExecutor == nil {
 		t.ReWOO.ToolsExecutor = globalToolsExecutor
 	}
-	if t.Graph == nil {
+	if t.graph == nil {
 		if g, err := t.ReWOO.InitializeGraph(); err != nil {
 			return "", err
 		} else {
-			t.Graph = g
+			t.graph = g
 		}
 	}
 
-	state, err := t.Graph.Invoke(ctx, rewoo.State{
+	state, err := t.graph.Invoke(ctx, rewoo.State{
 		Task: input,
 	})
 	if err != nil {

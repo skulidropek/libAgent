@@ -14,6 +14,10 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+/*
+	This example shows how to manually use specific tool, without calling it through llm tool call.
+*/
+
 const Prompt = `You are a hacking assistant with access to various tools for research, such as nmap.
 Given user mission - find a possible attack vector and create a plan.
 
@@ -29,10 +33,10 @@ func main() {
 		log.Fatal().Err(err).Msg("new config")
 	}
 	if cfg.AIURL == "" {
-		log.Fatal().Err(err).Msg("empty OpenAI URL")
+		log.Fatal().Err(err).Msg("empty AI URL")
 	}
 	if cfg.AIToken == "" {
-		log.Fatal().Err(err).Msg("empty OpenAI Token")
+		log.Fatal().Err(err).Msg("empty AI Token")
 	}
 	if cfg.Model == "" {
 		log.Fatal().Err(err).Msg("empty model")
@@ -61,7 +65,10 @@ func main() {
 		log.Fatal().Err(err).Msg("json marhsal rewooQuery")
 	}
 
-	result, err := toolsExecutor.Tools["rewoo"].Call(ctx, string(rewooQueryBytes))
+	result, err := toolsExecutor.CallTool(ctx,
+		tools.ReWOOToolDefinition.Name,
+		string(rewooQueryBytes),
+	)
 	if err != nil {
 		log.Fatal().Err(err).Msg("rewoo tool call")
 	}

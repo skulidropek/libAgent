@@ -11,6 +11,13 @@ import (
 	"github.com/tmc/langchaingo/llms"
 )
 
+var LLMDefinition = llms.FunctionDefinition{
+	Name: "LLM",
+	Description: `A pretrained LLM like yourself. Useful when you need to act with general
+world knowledge and common sense. Prioritize it when you are confident in solving the problem
+yourself. Input can be any instruction or task.`,
+}
+
 type ToolData struct {
 	Definition llms.FunctionDefinition
 	Call       func(context.Context, string) (string, error)
@@ -25,14 +32,26 @@ func (e ToolsExecutor) Execute(ctx context.Context, call llms.ToolCall) (llms.To
 		ToolCallID: call.ID,
 		Name:       call.FunctionCall.Name,
 	}
-	toolData, ok := e.Tools[call.FunctionCall.Name]
-	if !ok {
-		return response, fmt.Errorf("no such tool")
+
+	content, err := e.CallTool(ctx,
+		call.FunctionCall.Name,
+		call.FunctionCall.Arguments,
+	)
+	if err != nil {
+		return response, err
 	}
 
-	var err error
-	response.Content, err = toolData.Call(ctx, call.FunctionCall.Arguments)
+	response.Content = content
 	return response, err
+}
+
+func (e ToolsExecutor) CallTool(ctx context.Context, toolName, args string) (string, error) {
+	toolData, ok := e.Tools[toolName]
+	if !ok {
+		return "", fmt.Errorf("no such tool")
+	}
+
+	return toolData.Call(ctx, args)
 }
 
 func (e ToolsExecutor) ToolsList() []llms.Tool {
@@ -56,12 +75,7 @@ func (e ToolsExecutor) ToolsPromptDesc() string {
 	desc := ""
 
 	funcDefs := []llms.FunctionDefinition{
-		{
-			Name: "LLM",
-			Description: `A pretrained LLM like yourself. Useful when you need to act with general
-world knowledge and common sense. Prioritize it when you are confident in solving the problem
-yourself. Input can be any instruction or task.`,
-		},
+		LLMDefinition,
 	}
 	for _, toolData := range e.Tools {
 		funcDefs = append(funcDefs, toolData.Definition)

@@ -1,20 +1,15 @@
-package generic
+package simple
 
 import (
 	"context"
 	"encoding/json"
-
-	"github.com/Swarmind/libagent/internal/tools"
 
 	"github.com/tmc/langchaingo/llms"
 	"github.com/tmc/langchaingo/llms/openai"
 )
 
 type Agent struct {
-	LLM           *openai.LLM
-	ToolsExecutor *tools.ToolsExecutor
-
-	toolsList *[]llms.Tool
+	LLM *openai.LLM
 }
 
 func (a *Agent) Run(
@@ -22,28 +17,14 @@ func (a *Agent) Run(
 	state []llms.MessageContent,
 	opts ...llms.CallOption,
 ) (llms.MessageContent, error) {
-	if a.toolsList == nil {
-		a.toolsList = &[]llms.Tool{}
-	}
-	if len(*a.toolsList) == 0 {
-		*a.toolsList = a.ToolsExecutor.ToolsList()
-	}
-
-	opts = append(opts, llms.WithTools(*a.toolsList))
-
 	response, err := a.LLM.GenerateContent(
-		ctx, state, opts...,
+		ctx, state,
 	)
 	if err != nil {
 		return llms.MessageContent{}, err
 	}
 
 	content := response.Choices[0].Content
-	if toolContent := a.ToolsExecutor.ProcessToolCalls(
-		ctx, response.Choices[0].ToolCalls,
-	); toolContent != "" {
-		content = toolContent
-	}
 
 	jsonSafeContent, err := json.Marshal(content)
 	if err != nil {
@@ -58,32 +39,17 @@ func (a *Agent) SimpleRun(
 	input string,
 	opts ...llms.CallOption,
 ) (string, error) {
-	if a.toolsList == nil {
-		a.toolsList = &[]llms.Tool{}
-	}
-	if len(*a.toolsList) == 0 {
-		*a.toolsList = a.ToolsExecutor.ToolsList()
-	}
-
-	opts = append(opts, llms.WithTools(*a.toolsList))
-
 	response, err := a.LLM.GenerateContent(ctx,
 		[]llms.MessageContent{
 			llms.TextParts(llms.ChatMessageTypeHuman,
 				input,
 			)},
-		opts...,
 	)
 	if err != nil {
 		return "", err
 	}
 
 	content := response.Choices[0].Content
-	if toolContent := a.ToolsExecutor.ProcessToolCalls(
-		ctx, response.Choices[0].ToolCalls,
-	); toolContent != "" {
-		content = toolContent
-	}
 
 	jsonSafeContent, err := json.Marshal(content)
 	if err != nil {

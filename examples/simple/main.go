@@ -5,9 +5,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Swarmind/libagent/pkg/agent/generic"
+	"github.com/Swarmind/libagent/pkg/agent/simple"
 	"github.com/Swarmind/libagent/pkg/config"
-	"github.com/Swarmind/libagent/pkg/tools"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -15,14 +14,10 @@ import (
 )
 
 /*
-	This example shows how to initialize and use a generic tools enabled agent.
+	This example shows how to initialize and use a simple agent without any tools or specific stuff.
 */
 
-const Prompt = `Please use rewoo tool with the next prompt:
-Using semantic search tool, which can search across various code from the project
-collections find out the telegram library name in the code file contents for the project called "Hellper".
-Extract it from the given code and use a web search to find the pkg.go.dev documentation for it.
-Give me the URL for it.`
+const Prompt = `This is a test. Write OK in response.`
 
 func main() {
 	zerolog.SetGlobalLevel(zerolog.DebugLevel)
@@ -43,7 +38,7 @@ func main() {
 	}
 
 	ctx := context.Background()
-	agent := generic.Agent{}
+	agent := simple.Agent{}
 
 	llm, err := openai.New(
 		openai.WithBaseURL(cfg.AIURL),
@@ -55,12 +50,6 @@ func main() {
 		log.Fatal().Err(err).Msg("new openai api llm")
 	}
 	agent.LLM = llm
-
-	toolsExecutor, err := tools.NewToolsExecutor(ctx, cfg)
-	if err != nil {
-		log.Fatal().Err(err).Msg("new tools executor")
-	}
-	agent.ToolsExecutor = toolsExecutor
 
 	result, err := agent.SimpleRun(ctx, Prompt)
 	if err != nil {
