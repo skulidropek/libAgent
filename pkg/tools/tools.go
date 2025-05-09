@@ -35,7 +35,7 @@ func NewToolsExecutor(ctx context.Context, cfg config.Config, opts ...ExecutorOp
 			continue
 		}
 
-		if tool.Definition.Name != "LLM" && len(options.ToolsWhitelist) > 0 &&
+		if len(options.ToolsWhitelist) > 0 &&
 			!slices.Contains(
 				options.ToolsWhitelist,
 				tool.Definition.Name,
