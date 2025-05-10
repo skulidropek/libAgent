@@ -56,11 +56,21 @@ func main() {
 	}
 	agent.LLM = llm
 
-	toolsExecutor, err := tools.NewToolsExecutor(ctx, cfg)
+	toolsExecutor, err := tools.NewToolsExecutor(ctx, cfg, tools.WithToolsWhitelist(
+		tools.ReWOOToolDefinition.Name,
+		tools.SemanticSearchDefinition.Name,
+		tools.DDGSearchDefinition.Name,
+		tools.WebReaderDefinition.Name,
+	))
 	if err != nil {
 		log.Fatal().Err(err).Msg("new tools executor")
 	}
 	agent.ToolsExecutor = toolsExecutor
+	defer func() {
+		if err := toolsExecutor.Cleanup(); err != nil {
+			log.Fatal().Err(err).Msg("tools executor cleanup")
+		}
+	}()
 
 	result, err := agent.SimpleRun(ctx, Prompt)
 	if err != nil {

@@ -21,6 +21,7 @@ yourself. Input can be any instruction or task.`,
 type ToolData struct {
 	Definition llms.FunctionDefinition
 	Call       func(context.Context, string) (string, error)
+	Cleanup    func() error
 }
 
 type ToolsExecutor struct {
@@ -117,4 +118,16 @@ func (e ToolsExecutor) ProcessToolCalls(ctx context.Context, calls []llms.ToolCa
 		content = response.Content
 	}
 	return content
+}
+
+func (e ToolsExecutor) Cleanup() error {
+	for _, tool := range e.Tools {
+		if tool.Cleanup == nil {
+			continue
+		}
+		if err := tool.Cleanup(); err != nil {
+			return err
+		}
+	}
+	return nil
 }

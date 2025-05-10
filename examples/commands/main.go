@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -15,14 +14,29 @@ import (
 )
 
 /*
-	This example shows how to manually use specific tool, without calling it through llm tool call.
+	This example shows usage of command executor with rewoo tool, which are whitelisted.
 */
 
-const Prompt = `You are a hacking assistant with access to various tools for research, such as nmap.
-Given user mission - find a possible attack vector and create a plan.
+const Prompt = `Here is the step by step actions plan:
+- Create a file with 'banana' content
+- Read from it and verify it is indeed contains 'banana'
+- Modify it to 'bannana'
+- Read from it again and verify it is indeed containes 'bannana'
+- Check if 172.86.66.189 host has open 443 and 13370 ports
+- Get weather from wttr.in service with format=3 option
+- Write a hello world python script
+- Execute it and verify it is working
+- Create a directory "testrepo" and move that script inside
+- cd into that directory
+- Initialize a git repository
+- Configure git locally to use your (LLM) arbitrary name and email for the commit
+- Do a commit
 
-User Mission: 
-%s`
+You need to execute every step separately and write me a report as a list like this:
+ - create file with contents 'banana' [echo 'banana' > file.txt]: OK
+ - verify file contains 'banana' [cat file.txt]: banana
+ - ...
+`
 
 func main() {
 	zerolog.SetGlobalLevel(zerolog.DebugLevel)
@@ -41,11 +55,13 @@ func main() {
 	if cfg.Model == "" {
 		log.Fatal().Err(err).Msg("empty model")
 	}
-	cfg.SemanticSearchDisable = true
 
 	ctx := context.Background()
 
-	toolsExecutor, err := tools.NewToolsExecutor(ctx, cfg)
+	toolsExecutor, err := tools.NewToolsExecutor(ctx, cfg, tools.WithToolsWhitelist(
+		tools.ReWOOToolDefinition.Name,
+		tools.CommandExecutorDefinition.Name,
+	))
 	if err != nil {
 		log.Fatal().Err(err).Msg("new tools executor")
 	}
@@ -55,15 +71,8 @@ func main() {
 		}
 	}()
 
-	fmt.Println("Enter you task:")
-	userMission := ""
-	scanner := bufio.NewScanner(os.Stdin)
-	if scanner.Scan() {
-		userMission = scanner.Text()
-	}
-
 	rewooQuery := tools.ReWOOToolArgs{
-		Query: fmt.Sprintf(Prompt, userMission),
+		Query: Prompt,
 	}
 	rewooQueryBytes, err := json.Marshal(rewooQuery)
 	if err != nil {
@@ -78,9 +87,5 @@ func main() {
 		log.Fatal().Err(err).Msg("rewoo tool call")
 	}
 
-	if result == "" {
-		log.Fatal().Msg("main empty result")
-	}
-
-	fmt.Printf("Task:\n%s\n\nResult:\n%s\n", userMission, result)
+	fmt.Println(result)
 }

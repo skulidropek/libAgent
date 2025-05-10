@@ -35,7 +35,7 @@ type Config struct {
 
 	NmapDisable bool `env:"NMAP_DISABLE"`
 
-	SimpleCMDExecutorDisable bool `env:"SIMPLE_CMD_EXECUTOR_DISABLE"`
+	CommandExecutorDisable bool `env:"COMMAND_EXECUTOR_DISABLE"`
 }
 
 func NewConfig() (Config, error) {

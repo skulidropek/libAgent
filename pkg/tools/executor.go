@@ -3,44 +3,59 @@ package tools
 import (
 	"context"
 	"encoding/json"
+	"os"
 	"os/exec"
-	"strings"
 
 	"github.com/Swarmind/libagent/internal/tools"
 	"github.com/Swarmind/libagent/pkg/config"
+	"github.com/rs/zerolog/log"
 
 	"github.com/tmc/langchaingo/llms"
 )
 
-var SimpleCommandExecutorDefinition = llms.FunctionDefinition{
-	Name:        "simpleCommandExecutor",
-	Description: "Executes a shell command with provided arguments using exec.Command.",
+var CommandExecutorDefinition = llms.FunctionDefinition{
+	Name: "commandExecutor",
+	Description: `Executes a provided string command in the bash -c wrapper.
+Uses temporary home directory, so the intermediate data can be stored freely.`,
 	Parameters: map[string]any{
 		"type": "object",
 		"properties": map[string]any{
 			"command": map[string]any{
 				"type":        "string",
-				"description": "the shell command to execute to.",
+				"description": "the shell command to execute to",
 			},
 		},
 	},
 }
 
-type SimpleCommandExecutorArgs struct {
+type CommandExecutorArgs struct {
 	Command string `json:"command"`
 }
 
-// SimpleCommandExecutorTool represents a tool that executes commands using exec.Command.
-type SimpleCommandExecutorTool struct{}
+// CommandExecutorTool represents a tool that executes commands using exec.Command.
+type CommandExecutorTool struct {
+	tempDir *string
+}
 
 // Call executes the command with the given arguments.
-func (s SimpleCommandExecutorTool) Call(ctx context.Context, input string) (string, error) {
-	simpleCommandExecutorArgs := SimpleCommandExecutorArgs{}
-	if err := json.Unmarshal([]byte(input), &simpleCommandExecutorArgs); err != nil {
+func (s *CommandExecutorTool) Call(ctx context.Context, input string) (string, error) {
+	commandExecutorArgs := CommandExecutorArgs{}
+	if err := json.Unmarshal([]byte(input), &commandExecutorArgs); err != nil {
 		return "", err
 	}
-	args := strings.Fields(simpleCommandExecutorArgs.Command)
-	cmd := exec.Command(args[0], args[1:]...)
+
+	if s.tempDir == nil {
+		tDir, err := os.MkdirTemp("", "libagent_command_executor_session_")
+		if err != nil {
+			return "", err
+		}
+		log.Debug().Msgf("command executor temp directory %s created", tDir)
+		s.tempDir = &tDir
+	}
+
+	log.Debug().Msgf("command executor: bash -c %s", commandExecutorArgs.Command)
+	cmd := exec.Command("bash", "-c", commandExecutorArgs.Command)
+	cmd.Dir = *s.tempDir
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -49,15 +64,28 @@ func (s SimpleCommandExecutorTool) Call(ctx context.Context, input string) (stri
 	return string(output), nil
 }
 
+func (s *CommandExecutorTool) cleanup() error {
+	if s.tempDir == nil {
+		return nil
+	}
+
+	log.Debug().Msgf("command executor remove temp directory %s", *s.tempDir)
+	return os.RemoveAll(*s.tempDir)
+}
+
 func init() {
 	globalToolsRegistry = append(globalToolsRegistry,
 		func(ctx context.Context, cfg config.Config) (*tools.ToolData, error) {
-			if cfg.SimpleCMDExecutorDisable {
+			if cfg.CommandExecutorDisable {
 				return nil, nil
 			}
+
+			commandExecutorTool := CommandExecutorTool{}
+
 			return &tools.ToolData{
-				Definition: SimpleCommandExecutorDefinition,
-				Call:       SimpleCommandExecutorTool{}.Call,
+				Definition: CommandExecutorDefinition,
+				Call:       commandExecutorTool.Call,
+				Cleanup:    commandExecutorTool.cleanup,
 			}, nil
 		},
 	)
