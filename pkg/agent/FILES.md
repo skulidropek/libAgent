@@ -1,3 +1,0 @@
-# pkg/agent/agent.go  
-"Package: agent\n\nImports:\n- \"context\"\n- \"github.com/tmc/langchaingo/llms\"\n\nExternal data, input sources:\n- The code interacts with the llms package, which likely provides access to large language models.\n\nTODOs:\n- There are no TODO comments in the provided code.\n\nSummary:\n- The agent package defines an Agent interface that represents an agent capable of interacting with a large language model. The interface includes two methods: Run and SimpleRun. The Run method takes a context, a list of messages, and optional call options as input and returns a message and an error. The SimpleRun method takes a context, an input string, and optional call options as input and returns a string and an error.\n\n\u003cend_of_output\u003e"  
-  
