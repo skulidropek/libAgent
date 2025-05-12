@@ -111,8 +111,14 @@ func (e ToolsExecutor) ProcessToolCalls(ctx context.Context, calls []llms.ToolCa
 	for _, toolCall := range calls {
 		response, err := e.Execute(ctx, toolCall)
 		if err != nil {
-			log.Warn().Err(err).Msgf("Tool %s call", toolCall.FunctionCall.Name)
-			content = fmt.Sprintf("Error calling tool %s: %v", toolCall.FunctionCall.Name, err)
+			log.Warn().Err(err).Msgf(
+				"Tool %s call with args: %s",
+				toolCall.FunctionCall.Name,
+				toolCall.FunctionCall.Arguments,
+			)
+			content = fmt.Sprintf("Error calling tool %s with args: %s: %v",
+				toolCall.FunctionCall.Name, toolCall.FunctionCall.Arguments, err,
+			)
 			continue
 		}
 		content = response.Content

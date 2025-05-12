@@ -16,10 +16,10 @@ import (
 var ReWOOToolDefinition = llms.FunctionDefinition{
 	Name: "rewoo",
 	Description: `A more complex LLM Reasoning algorithm.
-		Useful when you need to do a tool assisted reasoning research.
-		Usually tends to return a short response as a result of multiple step thinking.
-		Use it is you think that you have an isolated complex research subtask.
-		Input can be any complex task.`,
+Useful when you need to do a tool assisted reasoning research.
+Usually tends to return a short response as a result of multiple step thinking.
+Use it is you think that you have an isolated complex research subtask.
+Input can be any complex task.`,
 	Parameters: map[string]any{
 		"type": "object",
 		"properties": map[string]any{
@@ -58,7 +58,7 @@ func (t *ReWOOTool) Call(ctx context.Context, input string) (string, error) {
 	}
 
 	state, err := t.graph.Invoke(ctx, rewoo.State{
-		Task: input,
+		Task: rewooToolArgs.Query,
 	})
 	if err != nil {
 		return "", err

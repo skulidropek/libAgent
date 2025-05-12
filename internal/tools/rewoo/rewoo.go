@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/Swarmind/libagent/internal/tools"
@@ -45,7 +46,7 @@ Plan: Calculate the number of hours Rebecca worked. #E3 = Calculator[{"query": "
 Begin! 
 Describe your plans with rich details. Each Plan should be followed by only one #E.
 
-Task: `
+`
 
 const PromptSolver = `Solve the following task or problem. To solve the problem, we have made step-by-step Plan and \
 retrieved corresponding Evidence to each Plan. Use them with caution since long evidence might \
@@ -114,7 +115,7 @@ func (r ReWOO) GetPlan(ctx context.Context, s interface{}) (interface{}, error) 
 		[]llms.MessageContent{
 			llms.TextParts(llms.ChatMessageTypeHuman,
 				fmt.Sprintf(
-					"%s\nList of tools:\n%s\n\n%s",
+					"%s\nList of tools:\n%s\nTask:\n```\n%s```",
 					PromptGetPlan,
 					r.ToolsExecutor.ToolsPromptDesc(),
 					task,
@@ -127,17 +128,27 @@ func (r ReWOO) GetPlan(ctx context.Context, s interface{}) (interface{}, error) 
 
 	result := response.Choices[0].Content
 	matches := StepPattern.FindAllStringSubmatch(result, -1)
-	for _, m := range matches {
-		state.Steps = append(state.Steps,
-			Step{
-				// m[0] - full match,
-				Plan:      m[1],
-				Name:      m[2],
-				Tool:      m[3],
-				ToolInput: m[4],
-			},
-		)
+	if matches == nil {
+		return s, fmt.Errorf("empty plan matches")
+	}
 
+	sortedKeys := []string{}
+	// using map approach, as think models can double the step, and the last match is preferred.
+	stepMap := map[string]Step{}
+	for _, m := range matches {
+		stepMap[m[2]] = Step{
+			// m[0] - full match,
+			Plan:      m[1],
+			Name:      m[2],
+			Tool:      m[3],
+			ToolInput: m[4],
+		}
+		if !slices.Contains(sortedKeys, m[2]) {
+			sortedKeys = append(sortedKeys, m[2])
+		}
+	}
+	for _, key := range sortedKeys {
+		state.Steps = append(state.Steps, stepMap[key])
 	}
 
 	state.PlanString = result

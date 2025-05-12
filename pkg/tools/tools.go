@@ -47,9 +47,7 @@ func NewToolsExecutor(ctx context.Context, cfg config.Config, opts ...ExecutorOp
 	}
 	toolsExecutor.Tools = tools
 
-	if globalToolsExecutor == nil {
-		globalToolsExecutor = &toolsExecutor
-	}
+	globalToolsExecutor = &toolsExecutor
 
 	return &toolsExecutor, nil
 }

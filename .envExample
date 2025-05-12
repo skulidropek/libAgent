@@ -25,3 +25,5 @@ LIBAGENT_WEB_READER_DISABLE=false
 LIBAGENT_NMAP_DISABLE=false
 
 LIBAGENT_COMMAND_EXECUTOR_DISABLE=false
+LIBAGENT_COMMAND_EXECUTOR_CMD_PYTHON="python3
+Use 'python3', as there is no alias for just 'python' at the host machine"

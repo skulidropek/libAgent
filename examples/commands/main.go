@@ -27,8 +27,7 @@ const Prompt = `Here is the step by step actions plan:
 - Write a hello world python script
 - Execute it and verify it is working
 - Create a directory "testrepo" and move that script inside
-- cd into that directory
-- Initialize a git repository
+- Initialize a git repository in that directory
 - Configure git locally to use your (LLM) arbitrary name and email for the commit
 - Do a commit
 

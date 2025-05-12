@@ -18,7 +18,7 @@ import (
 	This example shows how to manually use specific tool, without calling it through llm tool call.
 */
 
-const Prompt = `You are a hacking assistant with access to various tools for research, such as nmap.
+const Prompt = `You are a hacking assistant with access to various tools for research.
 Given user mission - find a possible attack vector and create a plan.
 
 User Mission: 

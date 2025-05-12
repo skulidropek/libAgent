@@ -3,8 +3,10 @@ package tools
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/Swarmind/libagent/internal/tools"
 	"github.com/Swarmind/libagent/pkg/config"
@@ -13,10 +15,15 @@ import (
 	"github.com/tmc/langchaingo/llms"
 )
 
+const CommandNotesPromptAddition = `Here is information about available commands usage preferences:`
+
 var CommandExecutorDefinition = llms.FunctionDefinition{
 	Name: "commandExecutor",
 	Description: `Executes a provided string command in the bash -c wrapper.
-Uses temporary home directory, so the intermediate data can be stored freely.`,
+Uses temporary home directory.
+Warning!
+Every command will be executed from the temp home directory!
+You need specifically chain cd before command if it needs to be launched in other than home directory!`,
 	Parameters: map[string]any{
 		"type": "object",
 		"properties": map[string]any{
@@ -34,7 +41,8 @@ type CommandExecutorArgs struct {
 
 // CommandExecutorTool represents a tool that executes commands using exec.Command.
 type CommandExecutorTool struct {
-	tempDir *string
+	tempDir    *string
+	sessionDir *string
 }
 
 // Call executes the command with the given arguments.
@@ -59,8 +67,9 @@ func (s *CommandExecutorTool) Call(ctx context.Context, input string) (string, e
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("%+v: %s", err, output)
 	}
+
 	return string(output), nil
 }
 
@@ -82,8 +91,38 @@ func init() {
 
 			commandExecutorTool := CommandExecutorTool{}
 
+			definition := CommandExecutorDefinition
+			if len(cfg.CommandExecutorCommands) > 0 {
+				commandsList := ""
+				for command, description := range cfg.CommandExecutorCommands {
+					descSplit := strings.SplitN(description, "\n", 1)
+					if len(descSplit) == 2 {
+						commandsList += fmt.Sprintf(
+							"- %s: %s\n%s\n",
+							strings.ToLower(command),
+							descSplit[0], descSplit[1],
+						)
+					} else {
+						commandsList += fmt.Sprintf(
+							"- %s: %s\n",
+							strings.ToLower(command),
+							description,
+						)
+					}
+				}
+
+				definition.Description += fmt.Sprintf(
+					"\n%s\n%s",
+					CommandNotesPromptAddition, commandsList,
+				)
+			}
+
+			if strings.HasSuffix(definition.Description, "\n\n") {
+				definition.Description = strings.TrimSuffix(definition.Description, "\n")
+			}
+
 			return &tools.ToolData{
-				Definition: CommandExecutorDefinition,
+				Definition: definition,
 				Call:       commandExecutorTool.Call,
 				Cleanup:    commandExecutorTool.cleanup,
 			}, nil
