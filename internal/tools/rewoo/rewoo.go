@@ -76,6 +76,8 @@ const PromptCallTool = `You will be provided with tool name and arguments for th
 type ReWOO struct {
 	LLM           *openai.LLM
 	ToolsExecutor *tools.ToolsExecutor
+
+	DefaultCallOptions []llms.CallOption
 }
 
 type State struct {
@@ -124,6 +126,7 @@ func (r ReWOO) GetPlan(ctx context.Context, s interface{}) (interface{}, error) 
 					task,
 				),
 			)},
+		r.DefaultCallOptions...,
 	)
 	if err != nil {
 		return s, err
@@ -185,6 +188,7 @@ func (r ReWOO) Solve(ctx context.Context, s interface{}) (interface{}, error) {
 			llms.TextParts(llms.ChatMessageTypeHuman,
 				fmt.Sprintf(PromptSolver, plan, state.Task),
 			)},
+		r.DefaultCallOptions...,
 	)
 	if err != nil {
 		return state, err
@@ -237,6 +241,8 @@ func (r ReWOO) ToolExecution(ctx context.Context, s interface{}) (interface{}, e
 		Str("tool", step.Tool).
 		Str("prompt", prompt).
 		Msg("ReWOO: ToolExecution pre-GenerateContent")
+
+	options = append(r.DefaultCallOptions, options...)
 
 	response, err := r.LLM.GenerateContent(ctx,
 		[]llms.MessageContent{
