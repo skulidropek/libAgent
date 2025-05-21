@@ -19,6 +19,8 @@ type Config struct {
 	AIToken string `env:"AI_TOKEN"`
 	Model   string `env:"MODEL"`
 
+	GitHubToken string `env:"GITHUB_TOKEN"`
+
 	ReWOODisable bool `env:"REWOO_DISABLE"`
 
 	SemanticSearchDisable        bool   `env:"SEMANTIC_SEARCH_DISABLE"`
