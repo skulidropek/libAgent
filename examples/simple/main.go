@@ -27,15 +27,6 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("new config")
 	}
-	if cfg.AIURL == "" {
-		log.Fatal().Err(err).Msg("empty AI URL")
-	}
-	if cfg.AIToken == "" {
-		log.Fatal().Err(err).Msg("empty AI Token")
-	}
-	if cfg.Model == "" {
-		log.Fatal().Err(err).Msg("empty model")
-	}
 
 	ctx := context.Background()
 	agent := simple.Agent{}
@@ -51,7 +42,9 @@ func main() {
 	}
 	agent.LLM = llm
 
-	result, err := agent.SimpleRun(ctx, Prompt)
+	result, err := agent.SimpleRun(ctx,
+		Prompt, config.ConifgToCallOptions(cfg.DefaultCallOptions)...,
+	)
 	if err != nil {
 		log.Fatal().Err(err).Msg("agent run")
 	}

@@ -85,7 +85,8 @@ func init() {
 
 			rewooTool := ReWOOTool{
 				ReWOO: rewoo.ReWOO{
-					LLM: llm,
+					LLM:                llm,
+					DefaultCallOptions: config.ConifgToCallOptions(cfg.RewOODefaultCallOptions),
 				},
 			}
 

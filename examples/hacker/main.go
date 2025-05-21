@@ -32,15 +32,6 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("new config")
 	}
-	if cfg.AIURL == "" {
-		log.Fatal().Err(err).Msg("empty AI URL")
-	}
-	if cfg.AIToken == "" {
-		log.Fatal().Err(err).Msg("empty AI Token")
-	}
-	if cfg.Model == "" {
-		log.Fatal().Err(err).Msg("empty model")
-	}
 	cfg.SemanticSearchDisable = true
 
 	ctx := context.Background()
