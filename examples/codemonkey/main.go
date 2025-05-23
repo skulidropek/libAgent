@@ -19,24 +19,24 @@ import (
 const defaultRepoURL = "https://github.com/JackBekket/Reflexia"
 
 /*
-	Default repository: https://github.com/Swarmind/Reflexia
-	Default semantic search collection (if default repo is used): Reflexia
+	This example uses the ReWOO agent to manage a GitHub issue end-to-end,
+	inspired by the prompting style of examples/generic/main.go.
+	The prompt guides ReWOO on tool usage for various sub-tasks.
 
-	Usage:
-		go run examples/codemonkey/main.go -issue="Issue description or URL" [-repo="<other_repo_url>"] [-additionalContext="<extra info>"]
+	Default repository: https://github.com/JackBekket/Reflexia
+	Default semantic search collection (if default repo is used): Reflexia
 */
 
 func main() {
 	zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
-	// Define command-line flags
 	repoURL := flag.String("repo", defaultRepoURL, "Repository URL")
 	issueInput := flag.String("issue", "", "Issue number, full URL, or descriptive text (required)")
-	additionalCtx := flag.String("additionalContext", "", "Optional additional context or instructions for the agent about the repository or task.")
+	additionalCtx := flag.String("additionalContext", "", "Optional additional context for the agent.")
 	flag.Parse()
 
-	if *issueInput == "" { // repoURL has a default, so only issueInput needs to be checked for presence
+	if *issueInput == "" {
 		log.Fatal().Msg("Issue input is required. Use -issue flag.")
 		return
 	}
@@ -70,13 +70,12 @@ func main() {
 		}
 	}()
 
-	// Derive repository name and owner/repo string
 	var repoName string
 	var ownerAndRepo string
-
 	trimmedRepoURL := strings.TrimSuffix(*repoURL, ".git")
+
 	if trimmedRepoURL == strings.TrimSuffix(defaultRepoURL, ".git") {
-		repoName = "Reflexia" // Default project name for semantic search collection
+		repoName = "Reflexia"
 		ownerAndRepo = "JackBekket/Reflexia"
 	} else {
 		repoName = filepath.Base(trimmedRepoURL)
@@ -84,50 +83,58 @@ func main() {
 		if len(parts) >= 2 {
 			ownerAndRepo = fmt.Sprintf("%s/%s", parts[len(parts)-2], parts[len(parts)-1])
 		} else {
-			log.Warn().Str("repoURL", *repoURL).Msgf("Could not reliably determine owner/repo from repoURL. Using derived repoName '%s' for PRs if needed.", repoName)
-			ownerAndRepo = repoName // Fallback, might not be correct for gh CLI
+			ownerAndRepo = repoName // Fallback
 		}
 	}
 	log.Debug().Str("derived_repo_name", repoName).Str("derived_owner_repo", ownerAndRepo).Msg("Repository details derived.")
 
 	additionalContextString := ""
 	if *additionalCtx != "" {
-		// Format the additional context nicely for the prompt
-		additionalContextString = fmt.Sprintf("\n- Additional User-Provided Context: %s", *additionalCtx)
+		additionalContextString = fmt.Sprintf("\n\nAdditional Context Provided by User:\n%s", *additionalCtx)
 	}
 
-	// High-level task description for ReWOO
+	// Task description guiding ReWOO, similar in style to examples/generic/main.go's prompt
 	taskDescription := fmt.Sprintf(`
-Objective: As an autonomous AI Code Monkey, your mission is to comprehensively manage a GitHub issue. This includes understanding the issue, implementing the necessary code changes within the specified repository, and submitting a complete pull request with your solution.
+Your task is to act as an AI Code Monkey to resolve the GitHub issue identified by "%s" for the repository %s.
+The ultimate goal is to create a pull request with the implemented fix.
+%s
 
-Key Inputs for Your Mission:
-- Target Repository URL: %s
-- Issue Identifier (URL or details): %s%s
-- Semantic Search Collection Name (should you choose to use SemanticSearchTool): '%s'
-- Repository for GitHub CLI PR creation (owner/repo format): '%s'
+Please follow this general approach, utilizing the available tools as specified:
 
-Expected Deliverable:
-- A pull request created on GitHub for the repository '%s'. This PR should effectively resolve the identified issue.
-- A final summary report detailing your overall strategy, key actions, the plan you devised and followed, and the URL of the pull request if successfully created. If insurmountable errors occurred, they should be clearly documented in this report.
+1.  **Understand the Issue**:
+    * If the issue identifier ("%s") is a URL, use the 'WebReaderTool' to fetch its full content.
+    * Thoroughly analyze the complete issue description to understand the problem.
 
-Core Guidelines and Operational Notes:
-- Issue Investigation: If the 'Issue Identifier' is a URL, employ the 'WebReaderTool' to fetch and understand its full content. A deep understanding of the problem is paramount.
-- Repository Interaction: All Git operations (cloning, branching, checking out, adding files, committing, pushing) and GitHub CLI interactions (e.g., 'gh pr create' for pull requests) must be performed using the 'CommandExecutor' tool.
-    - Note on 'CommandExecutor': This tool executes commands within an isolated temporary directory. Your generated plan must account for this by ensuring commands like 'git' or file manipulations are executed in the correct context, typically by first using 'cd ./%s' to navigate into the cloned repository's subdirectory (e.g., './%s').
-- Branching Strategy: Devise and create a new branch for your work. The name should be descriptive and based on the issue.
-- Code Analysis and Context (Semantic Search): For non-trivial issues requiring an understanding of existing code, using the 'SemanticSearchTool' is highly recommended. Query the specified 'Semantic Search Collection Name' ('%s') with terms derived from the issue to retrieve relevant code snippets.
-- Code Implementation: Based on your analysis, plan and implement the required code modifications. Use 'CommandExecutor' for all file changes.
-- Pull Request Details: The pull request title should be clear and concise. The body should provide a summary of the problem, the implemented solution, and a reference to the original issue.
+2.  **Set up the Repository Environment**:
+    * First, use 'CommandExecutor' to clone the repository %s into a subdirectory named '%s'.
+    * Next, devise a suitable new branch name (e.g., "fix/issue-summary-slug") based on the issue's content.
+    * Then, to perform subsequent Git operations like creating a branch, YOU MUST USE 'CommandExecutor' by chaining commands to ensure they run inside the cloned repository. For example, to checkout main and create your new branch, the command should be: 'cd ./%s && git checkout main && git checkout -b your-new-branch-name'.
 
-Your overall plan should naturally incorporate phases such as: detailed issue comprehension, local repository setup (clone & branch), problem analysis (optionally with semantic search), code implementation, thorough committing of changes, pushing to remote, and finally, pull request submission.
+3.  **Gather Code Context (if needed for the fix)**:
+    * To understand the existing codebase relevant to the issue, use the 'SemanticSearchTool'.
+    * The 'collection' for this search must be '%s'.
+    * The 'query' should be derived from the detailed issue description you obtained in step 1.
 
-You have access to a suite of tools. Formulate a robust plan and execute it. Adapt to challenges as they arise.
-The system will provide you with a list of available tools.
-`, *repoURL, *issueInput, additionalContextString, repoName, ownerAndRepo, *repoURL, repoName, repoName, repoName)
+4.  **Develop and Implement Code Changes**:
+    * Based on your analysis of the issue and any code context from semantic search, determine the necessary code modifications.
+    * If you need to generate code snippets or reason about complex changes, you can use the 'LLM' tool (which is your own reasoning capability).
+    * To apply the changes to files, use 'CommandExecutor'. Remember to chain 'cd ./%s' with your file modification commands (e.g., 'cd ./%s && echo "new content" > path/to/file.go' or 'cd ./%s && sed -i "s/old/new/" path/to/file.go'). For multiple changes, consider planning a script to be written and then executed by 'CommandExecutor' within the repo directory.
+
+5.  **Commit and Push Changes**:
+    * Using 'CommandExecutor' (and adhering to the 'cd ./%s && ...' pattern), stage all your changes ('git add .').
+    * Then, commit the changes with a descriptive message that references the issue.
+    * Finally, push the new branch to the origin remote.
+
+6.  **Create Pull Request**:
+    * Use 'CommandExecutor' with the GitHub CLI ('gh') to create a pull request.
+    * The command should be structured like: 'cd ./%s && gh pr create --repo %s --title "Fix: [Issue Title]" --body "Fixes issue: %s. [Your summary of changes]" --base [main_or_master_branch] --head your-new-branch-name'.
+
+After completing these steps, provide a final summary report of your actions and the URL of the created pull request if successful. If any step fails, report the error clearly.
+`, *issueInput, *repoURL, additionalContextString, *issueInput, *repoURL, repoName, repoName, repoName, repoName, repoName, repoName, repoName, ownerAndRepo, *issueInput)
 
 	log.Info().Str("repository", *repoURL).Str("issue", *issueInput).Msg("Initiating ReWOO agent for Code Monkey task.")
 	if *additionalCtx != "" {
-		log.Info().Str("additional_context_provided", *additionalCtx).Msg("Additional context will be used.")
+		log.Info().Str("additional_context_provided_length", fmt.Sprintf("%d chars", len(*additionalCtx))).Msg("Additional context will be used.")
 	}
 	if zerolog.GlobalLevel() == zerolog.DebugLevel {
 		log.Debug().Str("rewoo_task_description_length", fmt.Sprintf("%d chars", len(taskDescription))).Msg("Constructed ReWOO Task for Code Monkey")
@@ -154,8 +161,8 @@ The system will provide you with a list of available tools.
 	fmt.Println("\n--- ReWOO Agent Task Execution Report ---")
 	fmt.Println(result)
 	fmt.Println("\n--- End of ReWOO Agent Task ---")
-	fmt.Println("\nOperational Reminders:")
-	fmt.Println("1. Ensure 'git' and GitHub CLI ('gh') are installed, configured, and available in the system PATH.")
+	fmt.Println("\nOperational Reminders:") // Keep these reminders for the user
+	fmt.Println("1. Ensure 'git' and GitHub CLI ('gh') are installed, configured, and in system PATH.")
 	fmt.Println("2. 'gh' CLI must be authenticated with GitHub (e.g., via 'gh auth login') for PR creation.")
-	fmt.Println("3. For 'SemanticSearchTool' to be effective, a 'pgvector' database must be set up, and the relevant collection (e.g., 'Reflexia' or your specified repository name) must be populated with code embeddings from the target repository.")
+	fmt.Println("3. For 'SemanticSearchTool', a 'pgvector' database with a collection named after the repository (e.g., 'Reflexia') must be populated with relevant code embeddings.")
 }
