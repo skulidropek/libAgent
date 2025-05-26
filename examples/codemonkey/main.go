@@ -40,7 +40,6 @@ func main() {
 		log.Fatal().Msg("Issue input is required. Use -issue flag.")
 		return
 	}
-
 	log.Debug().Str("issue_input", *issueInput).Msg("Received issue input")
 
 	cfg, err := config.NewConfig()
@@ -83,7 +82,7 @@ func main() {
 		if len(parts) >= 2 {
 			ownerAndRepo = fmt.Sprintf("%s/%s", parts[len(parts)-2], parts[len(parts)-1])
 		} else {
-			ownerAndRepo = repoName // Fallback
+			ownerAndRepo = repoName
 		}
 	}
 	log.Debug().Str("derived_repo_name", repoName).Str("derived_owner_repo", ownerAndRepo).Msg("Repository details derived.")
@@ -93,51 +92,65 @@ func main() {
 		additionalContextString = fmt.Sprintf("\n\nAdditional Context Provided by User:\n%s", *additionalCtx)
 	}
 
-	// Task description guiding ReWOO, similar in style to examples/generic/main.go's prompt
 	taskDescription := fmt.Sprintf(`
-Your task is to act as an AI Code Monkey to resolve the GitHub issue identified by "%s" for the repository %s.
-The ultimate goal is to create a pull request with the implemented fix.
+You are an AI Code Monkey tasked with resolving GitHub issue "%s" for repository %s. Your goal is to understand the issue and implement the fix.
 %s
 
-Please follow this general approach, utilizing the available tools as specified:
+Follow these steps:
 
-1.  **Understand the Issue**:
-    * If the issue identifier ("%s") is a URL, use the 'WebReaderTool' to fetch its full content.
-    * Thoroughly analyze the complete issue description to understand the problem.
+1. Understand the Issue:
+   - If the issue is a URL, use WebReaderTool to fetch its content (you are allowed to access links)
+   - Use LLM to analyze the issue content and extract key requirements
+   - Use SemanticSearchTool to find relevant files in the repository
 
-2.  **Set up the Repository Environment**:
-    * First, use 'CommandExecutor' to clone the repository %s into a subdirectory named '%s'.
-    * Next, devise a suitable new branch name (e.g., "fix/issue-summary-slug") based on the issue's content.
-    * Then, to perform subsequent Git operations like creating a branch, YOU MUST USE 'CommandExecutor' by chaining commands to ensure they run inside the cloned repository. For example, to checkout main and create your new branch, the command should be: 'cd ./%s && git checkout main && git checkout -b your-new-branch-name'.
+2. Set Up Development Environment:
+   - Use CommandExecutor to run: git clone %s
+   - Use CommandExecutor to change to repo directory: cd %s
+   - Use CommandExecutor to mark the directory as safe: cd %s && git config --global --add safe.directory "$(pwd)"
+   - Use CommandExecutor to view file structure: tree or ls -R
 
-3.  **Gather Code Context (if needed for the fix)**:
-    * To understand the existing codebase relevant to the issue, use the 'SemanticSearchTool'.
-    * The 'collection' for this search must be '%s'.
-    * The 'query' should be derived from the detailed issue description you obtained in step 1.
+3. Find and Modify Files:
+   - Use SemanticSearchTool to find relevant files and their contents
+   - For each file that needs changes:
+     * First, view the current file content: cd %s && cat <file>
+     * Create a backup: cd %s && cp <file> <file>.bak
+     * Make the required changes using CommandExecutor:
+       - For small changes: cd %s && echo 'new content' > <file>
+       - For larger changes: cd %s && cat > <file> << 'EOL'
+         new content
+         multiple lines
+         EOL
+     * Verify changes: cd %s && cat <file>
+     * Verify git status: cd %s && git status
+     * If changes are not showing in git status, make sure you're modifying the original file, not the backup
 
-4.  **Develop and Implement Code Changes**:
-    * Based on your analysis of the issue and any code context from semantic search, determine the necessary code modifications.
-    * If you need to generate code snippets or reason about complex changes, you can use the 'LLM' tool (which is your own reasoning capability).
-    * To apply the changes to files, use 'CommandExecutor'. Remember to chain 'cd ./%s' with your file modification commands (e.g., 'cd ./%s && echo "new content" > path/to/file.go' or 'cd ./%s && sed -i "s/old/new/" path/to/file.go'). For multiple changes, consider planning a script to be written and then executed by 'CommandExecutor' within the repo directory.
+4. After Making Changes:
+   - Verify all changes are present: cd %s && git status
+   - If changes are not showing, check:
+     * Are you in the correct directory?
+     * Are you modifying the original files (not .bak files)?
+     * Are the changes being written to the correct paths?
+   - If needed, use git diff to see what changes were made: cd %s && git diff
 
-5.  **Commit and Push Changes**:
-    * Using 'CommandExecutor' (and adhering to the 'cd ./%s && ...' pattern), stage all your changes ('git add .').
-    * Then, commit the changes with a descriptive message that references the issue.
-    * Finally, push the new branch to the origin remote.
-
-6.  **Create Pull Request**:
-    * Use 'CommandExecutor' with the GitHub CLI ('gh') to create a pull request.
-    * The command should be structured like: 'cd ./%s && gh pr create --repo %s --title "Fix: [Issue Title]" --body "Fixes issue: %s. [Your summary of changes]" --base [main_or_master_branch] --head your-new-branch-name'.
-
-After completing these steps, provide a final summary report of your actions and the URL of the created pull request if successful. If any step fails, report the error clearly.
-`, *issueInput, *repoURL, additionalContextString, *issueInput, *repoURL, repoName, repoName, repoName, repoName, repoName, repoName, repoName, ownerAndRepo, *issueInput)
+Note: 
+- Use CommandExecutor to run all commands, including viewing and modifying files
+- Use tree or ls to explore the repository structure
+- Use cat to view file contents before and after changes
+- For multi-line changes, use heredoc syntax (<< 'EOL')
+- Always verify changes after making them
+- Make sure to modify the original files, not just create backups
+- If changes aren't showing in git status, double-check your file paths and commands
+`, *issueInput, *repoURL, additionalContextString, *repoURL, repoName, repoName, repoName, repoName, repoName, repoName, repoName, repoName, repoName, repoName)
 
 	log.Info().Str("repository", *repoURL).Str("issue", *issueInput).Msg("Initiating ReWOO agent for Code Monkey task.")
 	if *additionalCtx != "" {
 		log.Info().Str("additional_context_provided_length", fmt.Sprintf("%d chars", len(*additionalCtx))).Msg("Additional context will be used.")
 	}
-	if zerolog.GlobalLevel() == zerolog.DebugLevel {
-		log.Debug().Str("rewoo_task_description_length", fmt.Sprintf("%d chars", len(taskDescription))).Msg("Constructed ReWOO Task for Code Monkey")
+	currentTaskDescLength := len(taskDescription)
+	log.Debug().Str("rewoo_task_description_length", fmt.Sprintf("%d chars", currentTaskDescLength)).Msg("Constructed ReWOO Task for Code Monkey")
+
+	if currentTaskDescLength > 4000 {
+		log.Warn().Msgf("ReWOO task description is %d chars, which is over the 4000 char suggestion. This might lead to issues.", currentTaskDescLength)
 	}
 
 	rewooQueryArgs := tools.ReWOOToolArgs{
@@ -161,8 +174,8 @@ After completing these steps, provide a final summary report of your actions and
 	fmt.Println("\n--- ReWOO Agent Task Execution Report ---")
 	fmt.Println(result)
 	fmt.Println("\n--- End of ReWOO Agent Task ---")
-	fmt.Println("\nOperational Reminders:") // Keep these reminders for the user
-	fmt.Println("1. Ensure 'git' and GitHub CLI ('gh') are installed, configured, and in system PATH.")
+	fmt.Println("\nOperational Reminders:")
+	fmt.Println("1. Ensure 'git' and GitHub CLI ('gh') are installed, configured, and available in the system PATH.")
 	fmt.Println("2. 'gh' CLI must be authenticated with GitHub (e.g., via 'gh auth login') for PR creation.")
 	fmt.Println("3. For 'SemanticSearchTool', a 'pgvector' database with a collection named after the repository (e.g., 'Reflexia') must be populated with relevant code embeddings.")
 }
