@@ -5,25 +5,24 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 
 	"github.com/Swarmind/libagent/internal/tools"
 	"github.com/Swarmind/libagent/pkg/config"
+	"github.com/ThomasRooney/gexpect"
+	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 
 	"github.com/tmc/langchaingo/llms"
 )
 
-const CommandNotesPromptAddition = `Here is information about available commands usage preferences:`
+const CommandNotesPromptAddition = `List of host-specific command substitutions and their descriptions:`
 
 var CommandExecutorDefinition = llms.FunctionDefinition{
 	Name: "commandExecutor",
-	Description: `Executes a provided string command in the bash -c wrapper.
+	Description: `Executes a provided string command in the interactive bash shell.
 Uses temporary home directory.
-Warning!
-Every command will be executed from the temp home directory!
-You need specifically chain cd before command if it needs to be launched in other than home directory!`,
+Most likely all needed packages are preinstalled.`,
 	Parameters: map[string]any{
 		"type": "object",
 		"properties": map[string]any{
@@ -41,8 +40,10 @@ type CommandExecutorArgs struct {
 
 // CommandExecutorTool represents a tool that executes commands using exec.Command.
 type CommandExecutorTool struct {
-	tempDir    *string
-	sessionDir *string
+	tempDir *string
+
+	process *gexpect.ExpectSubprocess
+	prompt  string
 }
 
 // Call executes the command with the given arguments.
@@ -59,18 +60,35 @@ func (s *CommandExecutorTool) Call(ctx context.Context, input string) (string, e
 		}
 		log.Debug().Msgf("command executor temp directory %s created", tDir)
 		s.tempDir = &tDir
+
+		s.process, err = gexpect.SpawnAtDirectory("env -i bash --norc --noprofile", *s.tempDir)
+		if err != nil {
+			return "", fmt.Errorf("spawn: %w", err)
+		}
+		s.process.Capture()
+		s.process.Expect("$")
+
+		s.prompt = uuid.New().String()
+		s.process.Send(fmt.Sprintf("PS1=%s\n", s.prompt))
+		s.process.Expect(fmt.Sprintf("PS1=%s", s.prompt))
+		s.process.Expect(s.prompt)
+		s.process.Collect()
 	}
 
-	log.Debug().Msgf("command executor: bash -c %s", commandExecutorArgs.Command)
-	cmd := exec.Command("bash", "-c", commandExecutorArgs.Command)
-	cmd.Dir = *s.tempDir
+	log.Debug().Msgf("command executor: %s", commandExecutorArgs.Command)
+	s.process.Capture()
+	s.process.Send(commandExecutorArgs.Command + "\n")
+	s.process.Expect(s.prompt)
 
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return "", fmt.Errorf("%+v: %s", err, output)
+	output := ""
+	outputLines := strings.Split(strings.TrimSpace(string(s.process.Collect())), "\n")
+	if len(outputLines) > 2 {
+		output = strings.Join(outputLines[1:len(outputLines)-1], "\n")
 	}
 
-	return string(output), nil
+	log.Debug().Msgf("command output: %s", output)
+
+	return output, nil
 }
 
 func (s *CommandExecutorTool) cleanup() error {
@@ -78,8 +96,14 @@ func (s *CommandExecutorTool) cleanup() error {
 		return nil
 	}
 
-	log.Debug().Msgf("command executor remove temp directory %s", *s.tempDir)
-	return os.RemoveAll(*s.tempDir)
+	log.Debug().Msgf("command executor remove temp directory and process shutdown %s", *s.tempDir)
+	err := os.RemoveAll(*s.tempDir)
+	s.tempDir = nil
+	if err != nil {
+		log.Warn().Err(err).Msg("Removing temp dir")
+	}
+
+	return s.process.Close()
 }
 
 func init() {
