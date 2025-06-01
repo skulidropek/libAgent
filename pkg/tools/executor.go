@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/Swarmind/libagent/internal/tools"
 	"github.com/Swarmind/libagent/pkg/config"
@@ -52,6 +53,10 @@ func (s *CommandExecutorTool) Call(ctx context.Context, input string) (string, e
 		return "", err
 	}
 
+	return s.RunCommand(commandExecutorArgs.Command)
+}
+
+func (s *CommandExecutorTool) RunCommand(input string) (string, error) {
 	if s.tempDir == nil {
 		tDir, err := os.MkdirTemp("", "libagent_command_executor_session_")
 		if err != nil {
@@ -80,26 +85,24 @@ func (s *CommandExecutorTool) Call(ctx context.Context, input string) (string, e
 		s.process.Collect()
 	}
 
-	// Send command using Go-syntax representation of the value to escape escapes of non-raw string
-	// Trim trailing '\' do avoid escaping last '\n' symbol
+	// Trim trailing '\' to avoid escaping last '\n' symbol
 	command := strings.TrimSuffix(
 		strings.ReplaceAll(
-			// Trim single `"` from the start and the end, since Go-syntax warps the string in them
 			// Replace '\"' with '"' to avoid double escaping, since the command is from json payload
-			strings.TrimSuffix(strings.TrimPrefix(fmt.Sprintf("%#v", commandExecutorArgs.Command), `"`), `"`),
+			strings.TrimSpace(input),
 			`\"`, `"`,
 		), `\`,
 	) + "\n"
 	log.Debug().Msgf("command executor: %s", strings.TrimSpace(command))
 	s.process.Capture()
 	s.process.Send(command)
-	s.process.Expect(s.prompt)
+	s.process.ExpectTimeout(s.prompt, time.Second*30)
 
-	output := ""
+	output := string(s.process.Collect())
 	// Collected output will include prompt and entered command line
 	// Strip the first line and trim prompt suffix (since output command can be terminated without newline)
-	outputLines := strings.Split(strings.TrimSpace(string(s.process.Collect())), "\n")
-	output = strings.TrimSpace(strings.TrimSuffix(strings.Join(outputLines[1:], "\n"), s.prompt))
+	outputLines := strings.Split(strings.TrimSpace(output), "\n")[1:]
+	output = strings.TrimSpace(strings.TrimSuffix(strings.Join(outputLines, "\n"), s.prompt))
 
 	log.Debug().Msgf("command output: %s", output)
 
