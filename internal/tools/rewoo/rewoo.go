@@ -10,6 +10,7 @@ import (
 
 	"github.com/Swarmind/libagent/internal/tools"
 	"github.com/Swarmind/libagent/pkg/util"
+	"github.com/google/uuid"
 
 	graph "github.com/JackBekket/langgraphgo/graph/stategraph"
 	"github.com/rs/zerolog/log"
@@ -18,14 +19,15 @@ import (
 )
 
 const (
-	GraphPlanName  = "plan"
-	GraphToolName  = "tool"
-	GraphSolveName = "solve"
+	GraphPlanName   = "plan"
+	GraphToolName   = "tool"
+	GraphSolveName  = "solve"
+	ObserveAttempts = 3
 )
 
 const PromptGetPlan = `For the following task, make plans that can solve the problem step by step. For each plan, indicate
-which external tool together with tool input to retrieve evidence. You can store the evidence into a
-variable #E that can be called by later tools. (Plan, #E1, Plan, #E2, Plan, ...)
+which external tool together with tool input to retrieve evidence. You can store the evidence into a ` +
+	`variable #E that can be called by later tools. (Plan, #E1, Plan, #E2, Plan, ...)
 Each step is context isolated and need to be explicitly provided with evidence variable or task context details if needed.
 You need to strictly stick to the output format as in the example below, as your output will be parsed using regex match for the future use.
 
@@ -52,9 +54,9 @@ Describe your plans with rich details. Each Plan should be followed by only one 
 
 `
 
-const PromptSolver = `Solve the following task or problem. To solve the problem, we have made step-by-step Plan and \
-retrieved corresponding Evidence to each Plan. Use them with caution since long evidence might \
-contain irrelevant information.
+const PromptSolver = `Solve the following task or problem. To solve the problem, we have made step-by-step Plan and ` +
+	`retrieved corresponding Evidence to each Plan. Use them with caution since long evidence might ` +
+	`contain irrelevant information.
 
 %s
 
@@ -64,14 +66,44 @@ directly with no extra words.
 Task: %s
 Response:`
 
-const PromptLLMTool = `Do not include any introductory phrases or explanations. Task: %s`
-const PromptCallTool = `You will be provided with tool name and arguments for the call.
-	Use tool description and plan to decide how to resolve the provided arguments into the tool call schema.
-	Try to sanitize arguments, resolve possible string concatenation.
-	Plan: %s
-	Tool name: %s
-	Tool description: %s
-	Arguments: %s
+const PromptDecision = `Decide if the plans for the task is correct based on the solved state.
+If so - mention string %s in response,
+if not - write the word 'banana'.
+Task:
+%s
+
+Plans:
+%s
+
+Solved plans:
+%s
+`
+
+const PromptRegeneratePlan = `%s
+Task:
+%s
+
+Wrong solved plan:
+%s
+
+Generate a fixed plan, fixing the possible errors of the wrong solved plan above
+`
+
+const PromptLLMTool = `Do not include any introductory phrases or explanations.
+Task:
+%s
+`
+const PromptCallTool = `Use tool description and plan to decide how to resolve the provided arguments into the tool call schema.
+Try to sanitize arguments, resolve possible string concatenation.
+Plan:
+%s
+
+Tool name: %s
+Tool description:
+%s
+
+ToolCall arguments:
+%s
 `
 
 type ReWOO struct {
@@ -82,10 +114,12 @@ type ReWOO struct {
 }
 
 type State struct {
+	Attempt    int
 	Task       string
 	PlanString string
 	Steps      []Step
 	Results    map[string]string
+	SolvedPlan string
 	Result     string
 }
 
@@ -107,34 +141,36 @@ func (r ReWOO) InitializeGraph() (*graph.Runnable, error) {
 	workflowGraph.AddNode("tool", r.ToolExecution)
 	workflowGraph.AddNode("solve", r.Solve)
 	workflowGraph.AddEdge("plan", "tool")
-	workflowGraph.AddEdge("solve", graph.END)
+	workflowGraph.AddConditionalEdge("solve", r.ObserveEnd)
 	workflowGraph.AddConditionalEdge("tool", r.Route)
 	workflowGraph.SetEntryPoint("plan")
 	return workflowGraph.Compile()
 }
 
 func (r ReWOO) GetPlan(ctx context.Context, s interface{}) (interface{}, error) {
-	state := s.(State)
-	task := state.Task
+	state := s.(*State)
 
-	response, err := r.LLM.GenerateContent(ctx,
-		[]llms.MessageContent{
-			llms.TextParts(llms.ChatMessageTypeHuman,
-				fmt.Sprintf(
-					"%s\nList of tools:\n%s\nTask:\n```\n%s```",
-					PromptGetPlan,
-					r.ToolsExecutor.ToolsPromptDesc(),
-					task,
-				),
-			)},
-		r.DefaultCallOptions...,
-	)
-	if err != nil {
-		return s, err
+	if state.PlanString == "" {
+		response, err := r.LLM.GenerateContent(ctx,
+			[]llms.MessageContent{
+				llms.TextParts(llms.ChatMessageTypeHuman,
+					fmt.Sprintf(
+						"%s\nList of tools:\n%s\nTask:\n```\n%s```",
+						PromptGetPlan,
+						r.ToolsExecutor.ToolsPromptDesc(),
+						state.Task,
+					),
+				)},
+			r.DefaultCallOptions...,
+		)
+		if err != nil {
+			return s, err
+		}
+
+		state.PlanString = response.Choices[0].Content
 	}
 
-	result := response.Choices[0].Content
-	matches := StepPattern.FindAllStringSubmatch(result, -1)
+	matches := StepPattern.FindAllStringSubmatch(state.PlanString, -1)
 	if matches == nil {
 		return s, fmt.Errorf("empty plan matches")
 	}
@@ -158,8 +194,6 @@ func (r ReWOO) GetPlan(ctx context.Context, s interface{}) (interface{}, error) 
 		state.Steps = append(state.Steps, stepMap[key])
 	}
 
-	state.PlanString = result
-
 	log.Debug().
 		Interface("state.Steps", state.Steps).
 		Msg("ReWOO: GetPlan")
@@ -168,15 +202,15 @@ func (r ReWOO) GetPlan(ctx context.Context, s interface{}) (interface{}, error) 
 }
 
 func (r ReWOO) Solve(ctx context.Context, s interface{}) (interface{}, error) {
-	state := s.(State)
+	state := s.(*State)
 
-	plan := ""
+	state.SolvedPlan = ""
 	for _, step := range state.Steps {
 		for stepName, result := range state.Results {
 			step.ToolInput = strings.ReplaceAll(step.ToolInput, stepName, result)
 			step.Name = strings.ReplaceAll(step.Name, stepName, result)
 		}
-		plan += fmt.Sprintf(
+		state.SolvedPlan += fmt.Sprintf(
 			"Plan: %s\n%s = %s[%s]\n",
 			step.Plan,
 			step.Name,
@@ -187,7 +221,7 @@ func (r ReWOO) Solve(ctx context.Context, s interface{}) (interface{}, error) {
 	response, err := r.LLM.GenerateContent(ctx,
 		[]llms.MessageContent{
 			llms.TextParts(llms.ChatMessageTypeHuman,
-				fmt.Sprintf(PromptSolver, plan, state.Task),
+				fmt.Sprintf(PromptSolver, state.SolvedPlan, state.Task),
 			)},
 		r.DefaultCallOptions...,
 	)
@@ -204,7 +238,7 @@ func (r ReWOO) Solve(ctx context.Context, s interface{}) (interface{}, error) {
 }
 
 func (r ReWOO) ToolExecution(ctx context.Context, s interface{}) (interface{}, error) {
-	state := s.(State)
+	state := s.(*State)
 
 	step := state.Steps[getCurrentTask(state)]
 
@@ -300,14 +334,79 @@ func (r ReWOO) ToolExecution(ctx context.Context, s interface{}) (interface{}, e
 }
 
 func (_ ReWOO) Route(ctx context.Context, state interface{}) string {
-	if getCurrentTask(state.(State)) == -1 {
+	if getCurrentTask(state.(*State)) == -1 {
 		return GraphSolveName
 	} else {
 		return GraphToolName
 	}
 }
 
-func getCurrentTask(state State) int {
+func (r ReWOO) ObserveEnd(ctx context.Context, s interface{}) string {
+	state := s.(*State)
+
+	if state.Attempt == ObserveAttempts {
+		log.Warn().
+			Msg("ReWOO.ObserveEnd - maximum observe attempts")
+		return graph.END
+	}
+
+	decisionMarker := uuid.New().String()
+	response, err := r.LLM.GenerateContent(ctx,
+		[]llms.MessageContent{
+			llms.TextParts(llms.ChatMessageTypeHuman,
+				fmt.Sprintf(PromptDecision, decisionMarker, state.Task, state.PlanString, state.SolvedPlan),
+			)},
+		r.DefaultCallOptions...,
+	)
+	content := response.Choices[0].Content
+	log.Debug().
+		Str("decision_reasoning", content).
+		Int("attempt", state.Attempt).
+		Msg("ReWOO.ObserveEnd")
+	if err != nil {
+		log.Warn().Err(err).Msg("generate decision observe response")
+		return graph.END
+	}
+	if strings.Contains(util.RemoveThinkTag(content), decisionMarker) {
+		return graph.END
+	}
+	response, err = r.LLM.GenerateContent(ctx,
+		[]llms.MessageContent{
+			llms.TextParts(llms.ChatMessageTypeHuman,
+				fmt.Sprintf(PromptRegeneratePlan,
+					fmt.Sprintf(
+						"%s\nList of tools:\n%s\nTask:\n",
+						PromptGetPlan,
+						r.ToolsExecutor.ToolsPromptDesc(),
+					),
+					state.Task, state.SolvedPlan,
+				),
+			)},
+		r.DefaultCallOptions...,
+	)
+	state.PlanString = response.Choices[0].Content
+	state.SolvedPlan = ""
+	state.Steps = []Step{}
+	state.Results = map[string]string{}
+	log.Debug().
+		Str("new_plan", state.PlanString).
+		Msg("ReWOO.ObserveEnd")
+	state.Attempt += 1
+	matches := StepPattern.FindAllStringSubmatch(state.PlanString, -1)
+	if matches == nil {
+		log.Warn().Msg("ReWOO.ObserveEnd - empty matches in the new plan")
+		return graph.END
+	}
+
+	err = r.ToolsExecutor.Cleanup()
+	if err != nil {
+		log.Warn().Err(err).Msg("cleanup at plan regeneration")
+	}
+
+	return GraphPlanName
+}
+
+func getCurrentTask(state *State) int {
 	if len(state.Results) == len(state.Steps) {
 		return -1
 	}

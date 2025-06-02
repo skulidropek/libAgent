@@ -17,7 +17,7 @@ import (
 	"github.com/tmc/langchaingo/llms"
 )
 
-const CommandNotesPromptAddition = `List of host-specific command substitutions and their descriptions:`
+const CommandNotesPromptAddition = `Important! List of host machine specific command usage recommendations:`
 
 var CommandExecutorDefinition = llms.FunctionDefinition{
 	Name: "commandExecutor",
@@ -74,6 +74,7 @@ func (s *CommandExecutorTool) RunCommand(input string) (string, error) {
 		// Expect default bash shell prompt end
 		s.process.Expect("$")
 
+		s.process.Send(fmt.Sprintf("PATH=%s\n", os.Getenv("PATH")))
 		// Create a random UUID to set as a prompt to be sure that there are command end
 		s.prompt = uuid.New().String()
 		s.process.Send(fmt.Sprintf("PS1=%s\n", s.prompt))
@@ -96,7 +97,10 @@ func (s *CommandExecutorTool) RunCommand(input string) (string, error) {
 	log.Debug().Msgf("command executor: %s", strings.TrimSpace(command))
 	s.process.Capture()
 	s.process.Send(command)
-	s.process.ExpectTimeout(s.prompt, time.Second*30)
+	err := s.process.ExpectTimeout(s.prompt, time.Second*30)
+	if err != nil {
+		s.process.Send(string([]byte{0x03}))
+	}
 
 	output := string(s.process.Collect())
 	// Collected output will include prompt and entered command line

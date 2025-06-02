@@ -31,7 +31,7 @@ const Prompt = `Here is the step by step actions plan:
 	- Configure git locally to use your (LLM) arbitrary name and email for the commit
 	- Do a commit
 
-You need to execute every step separately and write me a report as a list like this:
+As a result of future plan solving - write me a report as a list like this:
 	- create file with contents 'banana' [echo 'banana' > file.txt]: OK
 	- verify file contains 'banana' [cat file.txt]: banana
 	- ...

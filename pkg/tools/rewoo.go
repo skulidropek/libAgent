@@ -57,14 +57,14 @@ func (t *ReWOOTool) Call(ctx context.Context, input string) (string, error) {
 		}
 	}
 
-	state, err := t.graph.Invoke(ctx, rewoo.State{
+	state, err := t.graph.Invoke(ctx, &rewoo.State{
 		Task: rewooToolArgs.Query,
 	})
 	if err != nil {
 		return "", err
 	}
 
-	return state.(rewoo.State).Result, nil
+	return state.(*rewoo.State).Result, nil
 }
 
 func init() {
