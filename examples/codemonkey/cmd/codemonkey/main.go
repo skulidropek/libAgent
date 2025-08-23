@@ -3,22 +3,28 @@ package main
 import (
 	"fmt"
 
+	githubservice "github.com/Swarmind/libagent/examples/codemonkey/pkg/github"
 	"github.com/Swarmind/libagent/examples/codemonkey/pkg/reviewer"
+	utility "github.com/Swarmind/libagent/examples/codemonkey/pkg/util"
 	"github.com/Swarmind/libagent/pkg/util"
 )
 
 func main() {
 
-	//githellper goroutine for incoming issues
+	es := &githubservice.EventsService{
+		GithubAPI: githubservice.ConstructGithubApi(),
+		Ichan:     make(chan githubservice.IssueEvent, 10),
+	}
 
-	task := reviewer.GatherInfo("Save only groupchats to the database", "Hellper")
-	task = util.RemoveThinkTag(task)
-	fmt.Println("Output: ", task)
+	go es.StartWebhookHandler(utility.GetEnv("LISTEN_ADDR"))
 
-	//planner CreatePlan()
+	for issue := range es.Ichan {
+		fmt.Printf("Got issue: %s\n", issue.RepoName)
 
-	//executor Execute()
+		task := reviewer.GatherInfo(issue.IssueText, issue.RepoName)
+		task = util.RemoveThinkTag(task)
 
-	//if Execute() ==err CreatePlan(err text) x 2
+		fmt.Println("Reviewer result: ", task)
 
+	}
 }
