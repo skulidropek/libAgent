@@ -3,15 +3,16 @@ package main
 import (
 	"fmt"
 
-	githubservice "github.com/Swarmind/libagent/examples/codemonkey/pkg/github"
+	"github.com/Swarmind/libagent/examples/codemonkey/pkg/planner"
 	"github.com/Swarmind/libagent/examples/codemonkey/pkg/reviewer"
-	utility "github.com/Swarmind/libagent/examples/codemonkey/pkg/util"
 	"github.com/Swarmind/libagent/pkg/util"
 )
 
 func main() {
 
-	es := &githubservice.EventsService{
+	//issue flow
+
+	/* es := &githubservice.EventsService{
 		GithubAPI: githubservice.ConstructGithubApi(),
 		Ichan:     make(chan githubservice.IssueEvent, 10),
 	}
@@ -23,8 +24,14 @@ func main() {
 
 		task := reviewer.GatherInfo(issue.IssueText, issue.RepoName)
 		task = util.RemoveThinkTag(task)
-
 		fmt.Println("Reviewer result: ", task)
 
 	}
+	*/
+
+	//test stuff
+	task := reviewer.GatherInfo("Change hello message to Can I haz cheeseburger?", "Hellper")
+	task = util.RemoveThinkTag(task)
+	plan := planner.Plan(task)
+	fmt.Println("Planner result: ", plan)
 }
