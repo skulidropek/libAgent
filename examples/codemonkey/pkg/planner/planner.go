@@ -12,7 +12,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-const lePrompt = `Role: You are an Instruction Synthesis Agent. Your task is to transform a code review summary into a precise, executable action plan for a command-executor agent.
+const lePromptGithelper = `Role: You are an Instruction Synthesis Agent. Your task is to transform a code review summary into a precise, executable action plan for a command-executor agent.
 
 Input: You will be given a "Reviewer Result" text block containing an issue summary, desired outcome, relevant information, affected files, and code analysis.
 
@@ -45,7 +45,7 @@ text
 
 **5. VERIFICATION:**
 - Run a syntax check or linter specific to the project's language (e.g., "go fmt <filepath>", "python -m py_compile <filepath>").
-- If applicable, execute any existing unit tests related to the modified functionality.
+- If syntax check fails, return the instruction with error text added at the last new line of it.
 
 Example Input:
 text
@@ -89,14 +89,49 @@ text
 - **Replace with:**
 
 "hello": "Can I haz cheeseburger?",
-text
 
 
 **5. VERIFICATION:**
 - Run a syntax check on the modified file according to the language used
 `
 
-func Plan(review string) string {
+var lePromptCLI = `You are an AI command generation assistant specialized in creating executable CLI command sequences. Your task is to analyze the given objective and output ONLY the CLI commands needed to accomplish it.
+
+RULES:
+1. Output ONLY valid Unix/Linux CLI commands, nothing else
+2. Separate multiple commands with newlines (\n)
+3. Use proper command sequencing with && when commands depend on each other
+4. Include all necessary flags and options for precise execution
+5. Ensure commands are safe, non-destructive, and non-interactive
+6. Use standard Unix/Linux commands that are widely available
+7. If verification is needed, include appropriate check commands
+8. Escape special characters properly for shell execution
+9. Do not use any programming languages or references to them, only CLI.
+
+OUTPUT FORMAT:
+- Output ONLY the raw commands, separated by newlines
+- No explanations, no step numbers, no descriptions
+- Multiple related commands can be chained with && on one line
+- Each discrete operation should be on its own line
+
+EXAMPLE 1:
+For objective "list files in current directory":
+ls -la
+
+EXAMPLE 2:
+For objective "find all .txt files and count lines":
+find . -name "*.txt" -type f
+xargs wc -l
+
+EXAMPLE 3:
+For objective "create directory and file":
+mkdir -p new_directory && cd new_directory && touch new_file.txt
+
+Generate ONLY the CLI commands needed for the following objective: 
+
+`
+
+func PlanGitHelper(review string) string {
 
 	zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
@@ -123,7 +158,57 @@ func Plan(review string) string {
 	}()
 
 	rewooQuery := tools.ReWOOToolArgs{
-		Query: (lePrompt + "\n" + review),
+		Query: (lePromptGithelper + "\n" + review),
+	}
+	rewooQueryBytes, err := json.Marshal(rewooQuery)
+	if err != nil {
+		log.Fatal().Err(err).Msg("json marhsal rewooQuery")
+	}
+
+	result, err := toolsExecutor.CallTool(ctx,
+		tools.ReWOOToolDefinition.Name,
+		string(rewooQueryBytes),
+	)
+	if err != nil {
+		log.Fatal().Err(err).Msg("rewoo tool call")
+	}
+
+	if result == "" {
+		log.Fatal().Msg("main empty result")
+	}
+
+	return result
+
+}
+
+func PlanCLIExecutor(task string) string {
+
+	zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+
+	cfg, err := config.NewConfig()
+	if err != nil {
+		log.Fatal().Err(err).Msg("new config")
+	}
+
+	ctx := context.Background()
+
+	toolsToWhitelist := []string{
+		tools.ReWOOToolDefinition.Name,
+	}
+
+	toolsExecutor, err := tools.NewToolsExecutor(ctx, cfg, tools.WithToolsWhitelist(toolsToWhitelist...))
+	if err != nil {
+		log.Fatal().Err(err).Msg("new tools executor")
+	}
+	defer func() {
+		if err := toolsExecutor.Cleanup(); err != nil {
+			log.Fatal().Err(err).Msg("tools executor cleanup")
+		}
+	}()
+
+	rewooQuery := tools.ReWOOToolArgs{
+		Query: (lePromptCLI + "\n" + task),
 	}
 	rewooQueryBytes, err := json.Marshal(rewooQuery)
 	if err != nil {

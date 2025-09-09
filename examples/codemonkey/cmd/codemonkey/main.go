@@ -3,9 +3,8 @@ package main
 import (
 	"fmt"
 
+	"github.com/Swarmind/libagent/examples/codemonkey/pkg/executor"
 	"github.com/Swarmind/libagent/examples/codemonkey/pkg/planner"
-	"github.com/Swarmind/libagent/examples/codemonkey/pkg/reviewer"
-	"github.com/Swarmind/libagent/pkg/util"
 )
 
 func main() {
@@ -30,8 +29,12 @@ func main() {
 	*/
 
 	//test stuff
-	task := reviewer.GatherInfo("Change hello message to Can I haz cheeseburger?", "Hellper")
+	/* task := reviewer.GatherInfo("Change hello message to Can I haz cheeseburger?", "Hellper")
 	task = util.RemoveThinkTag(task)
-	plan := planner.Plan(task)
+	plan := planner.PlanGitHelper(task)
 	fmt.Println("Planner result: ", plan)
+	*/
+	plan := planner.PlanCLIExecutor(`Find your current directory, then list all filenames of it. If it contains .txt files, delete them.`)
+	fmt.Println(plan)
+	executor.ExecuteCommands(plan)
 }
