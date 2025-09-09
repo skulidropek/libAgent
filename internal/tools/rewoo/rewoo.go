@@ -22,7 +22,7 @@ const (
 	GraphPlanName   = "plan"
 	GraphToolName   = "tool"
 	GraphSolveName  = "solve"
-	ObserveAttempts = 3
+	ObserveAttempts = 0
 )
 
 const PromptGetPlan = `For the following task, make plans that can solve the problem step by step. For each plan, indicate
