@@ -34,7 +34,7 @@ func main() {
 	plan := planner.PlanGitHelper(task)
 	fmt.Println("Planner result: ", plan)
 	*/
-	plan := planner.PlanCLIExecutor(`Find your current directory, then list all filenames of it. If it contains .txt files, delete them.`)
+	plan := planner.PlanCLIExecutor(`Find current OS version and OS type (windows/linux/android)`)
 	fmt.Println(plan)
 	executor.ExecuteCommands(plan)
 }
