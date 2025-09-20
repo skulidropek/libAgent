@@ -3,13 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/Swarmind/libagent/pkg/agent/generic"
 	"github.com/Swarmind/libagent/pkg/config"
+	_ "github.com/Swarmind/libagent/pkg/logging"
 	"github.com/Swarmind/libagent/pkg/tools"
 
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/tmc/langchaingo/llms/openai"
 )
@@ -25,9 +24,6 @@ Extract it from the given code and use a web search to find the pkg.go.dev docum
 Give me the URL for it.`
 
 func main() {
-	zerolog.SetGlobalLevel(zerolog.DebugLevel)
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
-
 	cfg, err := config.NewConfig()
 	if err != nil {
 		log.Fatal().Err(err).Msg("new config")

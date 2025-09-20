@@ -4,10 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/Swarmind/libagent/pkg/config"
+	_ "github.com/Swarmind/libagent/pkg/logging"
 	"github.com/Swarmind/libagent/pkg/tools"
 
 	"github.com/rs/zerolog"
@@ -61,9 +61,7 @@ As a result of future plan solving - write me a report as a list like this:
 `
 
 func main() {
-	// zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
 	cfg, err := config.NewConfig()
 	if err != nil {

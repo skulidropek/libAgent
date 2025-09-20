@@ -3,13 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/Swarmind/libagent/pkg/agent/simple"
 	"github.com/Swarmind/libagent/pkg/config"
+	_ "github.com/Swarmind/libagent/pkg/logging"
 	"github.com/Swarmind/libagent/pkg/util"
 
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/tmc/langchaingo/llms/openai"
 )
@@ -21,9 +20,6 @@ import (
 const Prompt = `This is a test. Write OK in response.`
 
 func main() {
-	zerolog.SetGlobalLevel(zerolog.DebugLevel)
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
-
 	cfg, err := config.NewConfig()
 	if err != nil {
 		log.Fatal().Err(err).Msg("new config")

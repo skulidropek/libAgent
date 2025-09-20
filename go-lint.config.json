@@ -1,0 +1,11 @@
+{
+  "priorityLevels": [
+    {
+      "level": 1,
+      "name": "Critical SMB Findings",
+      "rules": [
+        "smbgo"
+      ]
+    }
+  ]
+}

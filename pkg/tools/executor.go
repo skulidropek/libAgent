@@ -72,16 +72,26 @@ func (s *CommandExecutorTool) RunCommand(input string) (string, error) {
 		// Start recording buffer
 		s.process.Capture()
 		// Expect default bash shell prompt end
-		s.process.Expect("$")
+		if err := s.process.Expect("$"); err != nil {
+			return "", fmt.Errorf("expect initial prompt: %w", err)
+		}
 
-		s.process.Send(fmt.Sprintf("PATH=%s\n", os.Getenv("PATH")))
+		if err := s.process.Send(fmt.Sprintf("PATH=%s\n", os.Getenv("PATH"))); err != nil {
+			return "", fmt.Errorf("set PATH: %w", err)
+		}
 		// Create a random UUID to set as a prompt to be sure that there are command end
 		s.prompt = uuid.New().String()
-		s.process.Send(fmt.Sprintf("PS1=%s\n", s.prompt))
+		if err := s.process.Send(fmt.Sprintf("PS1=%s\n", s.prompt)); err != nil {
+			return "", fmt.Errorf("set prompt: %w", err)
+		}
 		// Expect sent command
-		s.process.Expect(fmt.Sprintf("PS1=%s", s.prompt))
+		if err := s.process.Expect(fmt.Sprintf("PS1=%s", s.prompt)); err != nil {
+			return "", fmt.Errorf("expect prompt confirmation: %w", err)
+		}
 		// Expect changed prompt
-		s.process.Expect(s.prompt)
+		if err := s.process.Expect(s.prompt); err != nil {
+			return "", fmt.Errorf("expect prompt change: %w", err)
+		}
 		// Discard output by draining output buffer
 		s.process.Collect()
 	}
@@ -96,10 +106,14 @@ func (s *CommandExecutorTool) RunCommand(input string) (string, error) {
 	) + "\n"
 	log.Debug().Msgf("command executor: %s", strings.TrimSpace(command))
 	s.process.Capture()
-	s.process.Send(command)
+	if err := s.process.Send(command); err != nil {
+		return "", fmt.Errorf("send command: %w", err)
+	}
 	err := s.process.ExpectTimeout(s.prompt, time.Second*30)
 	if err != nil {
-		s.process.Send(string([]byte{0x03}))
+		if sendErr := s.process.Send(string([]byte{0x03})); sendErr != nil {
+			log.Warn().Err(sendErr).Msg("command executor interrupt send")
+		}
 	}
 
 	output := string(s.process.Collect())

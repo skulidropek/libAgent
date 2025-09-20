@@ -201,6 +201,10 @@ github.com/shopspring/decimal v1.4.0 h1:bxl37RwXBklmTi0C79JfXCEBD1cqqHt0bbgBAGFp
 github.com/shopspring/decimal v1.4.0/go.mod h1:gawqmDU56v4yIKSwfBSFip1HdCCXN8/+DMd9qYNcwME=
 github.com/sirupsen/logrus v1.9.3 h1:dueUQJ1C2q9oE3F7wvmSGAaVtTmUizReu6fjN8uqzbQ=
 github.com/sirupsen/logrus v1.9.3/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVsIT4qYEQ=
+github.com/skulidropek/GoSuggestMembersAnalyzer v0.0.0-20250920142204-7335e9b0f61e h1:gsKaiffoRwAQ0Dbq1uA9M/c//4neakdi0qd+OFOHiV8=
+github.com/skulidropek/GoSuggestMembersAnalyzer v0.0.0-20250920142204-7335e9b0f61e/go.mod h1:hOijsuDYX4PiEqdscQ2Sn5YFFUKyQTVTMBr3v+EhuKM=
+github.com/skulidropek/gotrace v0.0.0-20250920132616-639d64981777 h1:TEwAGPhHTbYw2CYsxZ3PAmwVSD/lNiE5znaybbd/X3A=
+github.com/skulidropek/gotrace v0.0.0-20250920132616-639d64981777/go.mod h1:TLxp9RPXBz1MV+z7OiipHKQqyId+H2H7uGsTyhGzMhY=
 github.com/spf13/cast v1.6.0 h1:GEiTHELF+vaR5dhz3VqZfFSzZjYbgeKDpBxQVS4GYJ0=
 github.com/spf13/cast v1.6.0/go.mod h1:ancEpBxwJDODSW/UG4rDrAqiKolqNNh2DX3mk86cAdo=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=

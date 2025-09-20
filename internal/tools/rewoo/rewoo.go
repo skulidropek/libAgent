@@ -358,15 +358,19 @@ func (r ReWOO) ObserveEnd(ctx context.Context, s interface{}) string {
 			)},
 		r.DefaultCallOptions...,
 	)
+	if err != nil {
+		log.Warn().Err(err).Msg("generate decision observe response")
+		return graph.END
+	}
+	if len(response.Choices) == 0 {
+		log.Warn().Msg("ReWOO.ObserveEnd - empty decision response")
+		return graph.END
+	}
 	content := response.Choices[0].Content
 	log.Debug().
 		Str("decision_reasoning", content).
 		Int("attempt", state.Attempt).
 		Msg("ReWOO.ObserveEnd")
-	if err != nil {
-		log.Warn().Err(err).Msg("generate decision observe response")
-		return graph.END
-	}
 	if strings.Contains(util.RemoveThinkTag(content), decisionMarker) {
 		return graph.END
 	}
@@ -384,6 +388,14 @@ func (r ReWOO) ObserveEnd(ctx context.Context, s interface{}) string {
 			)},
 		r.DefaultCallOptions...,
 	)
+	if err != nil {
+		log.Warn().Err(err).Msg("generate plan regeneration response")
+		return graph.END
+	}
+	if len(response.Choices) == 0 {
+		log.Warn().Msg("ReWOO.ObserveEnd - empty regeneration response")
+		return graph.END
+	}
 	state.PlanString = response.Choices[0].Content
 	state.SolvedPlan = ""
 	state.Steps = []Step{}

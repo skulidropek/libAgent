@@ -85,10 +85,10 @@ func (s SemanticSearchTool) Call(ctx context.Context, input string) (string, err
 		pgvector.WithConn(pool),
 		pgvector.WithEmbedder(e),
 	)
-	defer store.Close()
 	if err != nil {
 		return response, err
 	}
+	defer store.Close()
 
 	searchResults, err := store.SimilaritySearch(ctx, semanticSearchArgs.Query, s.MaxResults)
 	if err != nil {

@@ -5,14 +5,13 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/Swarmind/libagent/pkg/config"
+	_ "github.com/Swarmind/libagent/pkg/logging"
 	"github.com/Swarmind/libagent/pkg/tools"
 
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
@@ -28,9 +27,6 @@ const defaultRepoURL = "https://github.com/JackBekket/Reflexia"
 */
 
 func main() {
-	zerolog.SetGlobalLevel(zerolog.DebugLevel)
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
-
 	repoURL := flag.String("repo", defaultRepoURL, "Repository URL")
 	issueInput := flag.String("issue", "", "Issue number, full URL, or descriptive text (required)")
 	additionalCtx := flag.String("additionalContext", "", "Optional additional context for the agent.")

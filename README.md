@@ -109,11 +109,20 @@ There are default call options can be configured through the `.env`, which can b
 ```
 
 ### Static analysis
-The repository includes the `smbgo` typo-suggestion analyzer. Install and run it with `go vet`:
+The repository includes the `smbgo` typo-suggestion analyzer. Install and run it as a standalone checker:
 
 ```bash
-go install github.com/skulidropek/GoSuggestMembersAnalyzer/cmd/smbgo@latest
-go vet -vettool=$(go env GOPATH)/bin/smbgo ./...
+# install the analyzer binary (respects the local replace in go.mod)
+go generate -tags tools ./tools
+
+# find where the binary was written (defaults to $(go env GOPATH)/bin)
+BIN_DIR=$(go env GOBIN)
+if [ -z "$BIN_DIR" ]; then
+    BIN_DIR=$(go env GOPATH)/bin
+fi
+
+# run the analyzer directly
+"$BIN_DIR"/smbgo ./...
 ```
 
 The analyzer replaces the standard "not found" diagnostics with detailed messages containing "did you mean" suggestions for selectors, identifiers, and import paths.

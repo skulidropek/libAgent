@@ -14,7 +14,8 @@ require (
 	github.com/jackc/pgx/v5 v5.7.4
 	github.com/joho/godotenv v1.5.1
 	github.com/rs/zerolog v1.34.0
-	github.com/skulidropek/GoSuggestMembersAnalyzer v0.0.0
+	github.com/skulidropek/GoSuggestMembersAnalyzer v0.0.0-20250920142204-7335e9b0f61e
+	github.com/skulidropek/gotrace v0.0.0-20250920132616-639d64981777
 	github.com/tmc/langchaingo v0.1.13
 )
 
@@ -52,5 +53,3 @@ require (
 	golang.org/x/text v0.29.0 // indirect
 	golang.org/x/tools v0.37.0 // indirect
 )
-
-replace github.com/skulidropek/GoSuggestMembersAnalyzer => ../GoSuggestMembersAnalyzer

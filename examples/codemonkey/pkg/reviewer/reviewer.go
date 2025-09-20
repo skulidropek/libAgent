@@ -4,20 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 
 	"github.com/Swarmind/libagent/pkg/config"
+	_ "github.com/Swarmind/libagent/pkg/logging"
 	"github.com/Swarmind/libagent/pkg/tools"
 
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
 func GatherInfo(issue string, repoName string) string {
-
-	zerolog.SetGlobalLevel(zerolog.DebugLevel)
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
-
 	cfg, err := config.NewConfig()
 	if err != nil {
 		log.Fatal().Err(err).Msg("new config")

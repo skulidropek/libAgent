@@ -4,11 +4,9 @@ import (
 	"context"
 	"encoding/json"
 
-	"os"
-
 	"github.com/Swarmind/libagent/pkg/config"
+	_ "github.com/Swarmind/libagent/pkg/logging"
 	"github.com/Swarmind/libagent/pkg/tools"
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
@@ -132,10 +130,6 @@ Generate ONLY the CLI commands needed for the following objective:
 `
 
 func PlanGitHelper(review string) string {
-
-	zerolog.SetGlobalLevel(zerolog.DebugLevel)
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
-
 	cfg, err := config.NewConfig()
 	if err != nil {
 		log.Fatal().Err(err).Msg("new config")
@@ -182,10 +176,6 @@ func PlanGitHelper(review string) string {
 }
 
 func PlanCLIExecutor(task string) string {
-
-	zerolog.SetGlobalLevel(zerolog.DebugLevel)
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
-
 	cfg, err := config.NewConfig()
 	if err != nil {
 		log.Fatal().Err(err).Msg("new config")
