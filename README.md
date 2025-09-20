@@ -107,3 +107,13 @@ There are default call options can be configured through the `.env`, which can b
 		log.Fatal().Err(err).Msg("agent run")
 	}
 ```
+
+### Static analysis
+The repository includes the `smbgo` typo-suggestion analyzer. Install and run it with `go vet`:
+
+```bash
+go install github.com/skulidropek/GoSuggestMembersAnalyzer/cmd/smbgo@latest
+go vet -vettool=$(go env GOPATH)/bin/smbgo ./...
+```
+
+The analyzer replaces the standard "not found" diagnostics with detailed messages containing "did you mean" suggestions for selectors, identifiers, and import paths.

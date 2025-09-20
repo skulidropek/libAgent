@@ -1,6 +1,6 @@
 module github.com/Swarmind/libagent
 
-go 1.24.2
+go 1.24.4
 
 require (
 	github.com/JackBekket/langgraphgo v0.1.4
@@ -14,6 +14,7 @@ require (
 	github.com/jackc/pgx/v5 v5.7.4
 	github.com/joho/godotenv v1.5.1
 	github.com/rs/zerolog v1.34.0
+	github.com/skulidropek/GoSuggestMembersAnalyzer v0.0.0
 	github.com/tmc/langchaingo v0.1.13
 )
 
@@ -42,10 +43,14 @@ require (
 	github.com/ysmood/gson v0.7.3 // indirect
 	github.com/ysmood/leakless v0.9.0 // indirect
 	go.starlark.net v0.0.0-20240520160348-046347dcd104 // indirect
-	golang.org/x/crypto v0.37.0 // indirect
+	golang.org/x/crypto v0.42.0 // indirect
 	golang.org/x/exp v0.0.0-20250408133849-7e4ce0ab07d0 // indirect
-	golang.org/x/net v0.39.0 // indirect
-	golang.org/x/sync v0.16.0 // indirect
-	golang.org/x/sys v0.32.0 // indirect
-	golang.org/x/text v0.24.0 // indirect
+	golang.org/x/mod v0.28.0 // indirect
+	golang.org/x/net v0.44.0 // indirect
+	golang.org/x/sync v0.17.0 // indirect
+	golang.org/x/sys v0.36.0 // indirect
+	golang.org/x/text v0.29.0 // indirect
+	golang.org/x/tools v0.37.0 // indirect
 )
+
+replace github.com/skulidropek/GoSuggestMembersAnalyzer => ../GoSuggestMembersAnalyzer
